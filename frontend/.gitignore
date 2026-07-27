@@ -45,3 +45,21 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
