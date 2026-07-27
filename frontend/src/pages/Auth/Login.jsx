@@ -5,6 +5,7 @@ import Button from "../../components/Button";
 import Input from "../../components/Input";
 import imsLogo from "../../assets/ims-logo.jpg";
 import { switchAccount } from "../../utils/authHistory";
+import { loginUser } from "../../services/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ function Login() {
     }
   }, [navigate]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
@@ -49,8 +50,17 @@ function Login() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      // 1. Check Demo Admin Account
+    try {
+      // 1. Try Backend PostgreSQL Auth API
+      const response = await loginUser({ email, password, role, employeeId });
+      if (response && response.user) {
+        switchAccount(response.user, navigate);
+        return;
+      }
+    } catch (apiErr) {
+      console.warn("Backend Auth Notice:", apiErr.message);
+
+      // Fallback to local authentication
       if (email.trim().toLowerCase() === "admin@imsgroup.com" && password === "admin123") {
         if (role !== "Administrator") {
           setError("This account is registered as Administrator. You cannot log in under the User role!");
@@ -72,15 +82,10 @@ function Login() {
         return;
       }
 
-      // 2. Fetch users list from localStorage
       let users = [];
       const usersStr = localStorage.getItem("idea360Users");
       if (usersStr) {
-        try {
-          users = JSON.parse(usersStr);
-        } catch (err) {
-          users = [];
-        }
+        try { users = JSON.parse(usersStr); } catch (err) { users = []; }
       }
 
       const singleUserStr = localStorage.getItem("idea360User");
@@ -90,9 +95,7 @@ function Login() {
           if (!users.some((u) => u.email.toLowerCase() === singleUser.email.toLowerCase())) {
             users.push(singleUser);
           }
-        } catch (err) {
-          console.error(err);
-        }
+        } catch (err) { console.error(err); }
       }
 
       const foundUser = users.find(
@@ -100,45 +103,25 @@ function Login() {
       );
 
       if (!foundUser) {
-        setError("Account not found! Check your email address or register first.");
+        setError(apiErr.message || "Account not found! Check your email address or register first.");
         setLoading(false);
         return;
       }
 
-      // 3. Strict Role Matching Check
       if (foundUser.role && foundUser.role !== role) {
         setError(
-          `This account was created as "${foundUser.role}". You cannot sign in under "${role}" role! Please select the ${foundUser.role} tab.`
+          `This account was created as "${foundUser.role}". You cannot sign in under "${role}" role!`
         );
         setLoading(false);
         return;
       }
 
-      // 4. Employee ID Check for Administrator logins
-      if (role === "Administrator") {
-        const enteredKey = employeeId.trim().toUpperCase();
-        const savedKey = (foundUser.employeeId || "").toUpperCase();
-        if (savedKey) {
-          if (savedKey !== enteredKey) {
-            setError("Incorrect Employee ID for this Administrator account!");
-            setLoading(false);
-            return;
-          }
-        } else if (!VALID_ADMIN_KEYS.includes(enteredKey)) {
-          setError("Invalid Admin Authorization Key / Employee ID!");
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 5. Password Check
       if (foundUser.password !== password) {
         setError("Incorrect password! Please try again.");
         setLoading(false);
         return;
       }
 
-      // Login Successful
       const loggedInAcc = {
         username: foundUser.username || "User",
         email: foundUser.email,
@@ -146,7 +129,7 @@ function Login() {
         employeeId: foundUser.employeeId || employeeId
       };
       switchAccount(loggedInAcc, navigate);
-    }, 400);
+    }
   };
 
   return (

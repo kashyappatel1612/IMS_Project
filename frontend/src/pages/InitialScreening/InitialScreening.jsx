@@ -1,78 +1,26 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Filter,
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Eye,
-  FileCheck,
-  Check,
-  X,
-  HelpCircle,
-  Sparkles,
-  ArrowRight
+  FileCheck
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import Modal from "../../components/Modal";
-import { getSubmittedIdeas, updateIdeaStatus } from "../../utils/ideaStorage";
+import { getSubmittedIdeas } from "../../utils/ideaStorage";
 
 function InitialScreening() {
+  const navigate = useNavigate();
   const [ideas, setIdeas] = useState([]);
-  const [selectedIdea, setSelectedIdea] = useState(null);
-  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
-
-  // 5 Screening Checklist Criteria States
-  const [duplicateCheck, setDuplicateCheck] = useState("No Duplicate"); // 'No Duplicate' | 'Duplicate Exists'
-  const [infoSufficiency, setInfoSufficiency] = useState("Sufficient"); // 'Sufficient' | 'Insufficient'
-  const [orgGoalFit, setOrgGoalFit] = useState("High Alignment"); // 'High Alignment' | 'Low Alignment'
-  const [scopeClarity, setScopeClarity] = useState("Clear Scope"); // 'Clear Scope' | 'Vague Scope'
-  const [businessSupport, setBusinessSupport] = useState("Available"); // 'Available' | 'Not Available'
-  const [evaluatorNotes, setEvaluatorNotes] = useState("");
 
   useEffect(() => {
     setIdeas(getSubmittedIdeas());
   }, []);
 
-  const openEvaluationModal = (idea) => {
-    setSelectedIdea(idea);
-    setDuplicateCheck("No Duplicate");
-    setInfoSufficiency("Sufficient");
-    setOrgGoalFit("High Alignment");
-    setScopeClarity("Clear Scope");
-    setBusinessSupport("Available");
-    setEvaluatorNotes("");
-    setIsEvaluationModalOpen(true);
-  };
-
-  const handlePassScreening = () => {
-    if (!selectedIdea) return;
-    const updated = updateIdeaStatus(selectedIdea.id, "Passed Initial Screening");
-    setIdeas(updated);
-    alert(`Idea "${selectedIdea.title}" passed Initial Screening! Sent to Review Management.`);
-    setIsEvaluationModalOpen(false);
-  };
-
-  const handleRejectScreening = () => {
-    if (!selectedIdea) return;
-    const updated = updateIdeaStatus(selectedIdea.id, "Rejected in Screening");
-    setIdeas(updated);
-    alert(`Idea "${selectedIdea.title}" has been Rejected in Screening.`);
-    setIsEvaluationModalOpen(false);
-  };
-
-  const handleRequestInfo = () => {
-    if (!selectedIdea) return;
-    const updated = updateIdeaStatus(selectedIdea.id, "Information Requested");
-    setIdeas(updated);
-    alert(`Requested additional information for "${selectedIdea.title}".`);
-    setIsEvaluationModalOpen(false);
-  };
-
-  // Filter ideas for screening queue: Exclude "Pending Review" ideas until explicitly sent by Admin
-  const screeningQueue = ideas.filter(
-    (i) => i.status !== "Pending Review"
-  );
+  // Show all submitted ideas in screening queue
+  const screeningQueue = ideas;
 
   return (
     <div className="dashboard-wrapper">
@@ -216,7 +164,7 @@ function InitialScreening() {
                           size="sm"
                           variant={isPassed ? "ghost" : "primary"}
                           icon={FileCheck}
-                          onClick={() => openEvaluationModal(item)}
+                          onClick={() => navigate(`/screening-evaluation/${item.id}`)}
                         >
                           {isPassed ? "Re-evaluate" : "Start Screening"}
                         </Button>
@@ -229,140 +177,6 @@ function InitialScreening() {
           </table>
         </div>
       </Card>
-
-      {/* INTERACTIVE MODAL: 5-Point Initial Screening Checklist */}
-      {selectedIdea && (
-        <Modal
-          isOpen={isEvaluationModalOpen}
-          onClose={() => setIsEvaluationModalOpen(false)}
-          title={`Screening Evaluation: ${selectedIdea.title}`}
-          footer={
-            <>
-              <Button variant="danger" icon={X} onClick={handleRejectScreening}>
-                Reject Idea
-              </Button>
-
-              <Button variant="outline" icon={HelpCircle} onClick={handleRequestInfo}>
-                Request More Info
-              </Button>
-
-              <Button variant="primary" icon={ArrowRight} onClick={handlePassScreening}>
-                Pass & Send to Review Management
-              </Button>
-            </>
-          }
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-            {/* Idea Details Preview Box */}
-            <div
-              style={{
-                background: "#f8fafc",
-                border: "1px solid var(--border-color)",
-                borderRadius: "var(--radius-md)",
-                padding: "14px"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--primary)" }}>
-                  {selectedIdea.category.toUpperCase()}
-                </span>
-                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                  Author: {selectedIdea.author} | {selectedIdea.date}
-                </span>
-              </div>
-              <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-dark)", marginBottom: "6px" }}>
-                {selectedIdea.title}
-              </h4>
-              {selectedIdea.problemStatement && (
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>
-                  <strong>Problem:</strong> {selectedIdea.problemStatement}
-                </p>
-              )}
-            </div>
-
-            <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)", borderBottom: "1px solid var(--border-light)", paddingBottom: "6px" }}>
-               5-Point Initial Screening Checklist
-            </h4>
-
-            {/* Criteria 1: Duplicate Check */}
-            <div className="input-field-group">
-              <label className="input-label">1. Duplicate Idea Check</label>
-              <select
-                className="custom-input-elem"
-                value={duplicateCheck}
-                onChange={(e) => setDuplicateCheck(e.target.value)}
-              >
-                <option value="No Duplicate"> No Duplicate (Unique Idea)</option>
-                <option value="Duplicate Exists"> Duplicate of Existing Idea/Project</option>
-              </select>
-            </div>
-
-            {/* Criteria 2: Information Sufficiency */}
-            <div className="input-field-group">
-              <label className="input-label">2. Enough Information Provided?</label>
-              <select
-                className="custom-input-elem"
-                value={infoSufficiency}
-                onChange={(e) => setInfoSufficiency(e.target.value)}
-              >
-                <option value="Sufficient"> Sufficient Information Provided</option>
-                <option value="Insufficient"> Insufficient / Incomplete Details</option>
-              </select>
-            </div>
-
-            {/* Criteria 3: Alignment with Organizational Goals */}
-            <div className="input-field-group">
-              <label className="input-label">3. Fits Organizational Strategic Goals?</label>
-              <select
-                className="custom-input-elem"
-                value={orgGoalFit}
-                onChange={(e) => setOrgGoalFit(e.target.value)}
-              >
-                <option value="High Alignment"> High Strategic Alignment</option>
-                <option value="Low Alignment"> Low / No Alignment with Goals</option>
-              </select>
-            </div>
-
-            {/* Criteria 4: Scope Clarity */}
-            <div className="input-field-group">
-              <label className="input-label">4. Scope & Objectives Clear?</label>
-              <select
-                className="custom-input-elem"
-                value={scopeClarity}
-                onChange={(e) => setScopeClarity(e.target.value)}
-              >
-                <option value="Clear Scope"> Scope & Objectives Clear</option>
-                <option value="Vague Scope"> Vague / Ambiguous Scope</option>
-              </select>
-            </div>
-
-            {/* Criteria 5: Business Support & Feasibility */}
-            <div className="input-field-group">
-              <label className="input-label">5. Business Support & Feasibility Available?</label>
-              <select
-                className="custom-input-elem"
-                value={businessSupport}
-                onChange={(e) => setBusinessSupport(e.target.value)}
-              >
-                <option value="Available"> Business Sponsor & Resources Available</option>
-                <option value="Not Available"> Business Support Not Available</option>
-              </select>
-            </div>
-
-            {/* Evaluator Notes */}
-            <div className="input-field-group">
-              <label className="input-label">Screening Evaluator Remarks</label>
-              <textarea
-                className="custom-input-elem"
-                rows={3}
-                placeholder="Enter key evaluation observations or recommendations..."
-                value={evaluatorNotes}
-                onChange={(e) => setEvaluatorNotes(e.target.value)}
-              ></textarea>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

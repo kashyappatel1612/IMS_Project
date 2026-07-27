@@ -1,18 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Menu, ChevronDown, User, Settings, LogOut, RefreshCw } from "lucide-react";
+import { Search, Menu, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import imsLogo from "../assets/ims-logo.jpg";
-import { getLoginHistory, switchAccount } from "../utils/authHistory";
 
 function Navbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const [user, setUser] = useState({ username: "Ayushman", role: "Administrator", email: "" });
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [recentAccounts, setRecentAccounts] = useState([]);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    setRecentAccounts(getLoginHistory());
 
     const savedUser = localStorage.getItem("currentUser");
     if (savedUser) {
@@ -43,11 +40,6 @@ function Navbar({ onToggleSidebar }) {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("currentUser");
     navigate("/");
-  };
-
-  const handleSwitch = (acc) => {
-    setDropdownOpen(false);
-    switchAccount(acc, navigate);
   };
 
   const userInitial = user.username
@@ -108,89 +100,6 @@ function Navbar({ onToggleSidebar }) {
                 <Settings size={16} />
                 <span>Account Settings</span>
               </button>
-
-              {/* Recent Accounts History Switcher (Placed directly above Sign Out) */}
-              {recentAccounts.length > 0 && (
-                <div style={{ padding: "8px", borderTop: "1px solid var(--border-light)", borderBottom: "1px solid var(--border-light)", margin: "4px 0" }}>
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      fontWeight: "700",
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      marginBottom: "6px"
-                    }}
-                  >
-                    <RefreshCw size={11} /> Switch Account (Last 3 Logins)
-                  </span>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {recentAccounts.map((acc, index) => {
-                      const isCurrent = acc.email && acc.email.toLowerCase() === user.email.toLowerCase();
-                      const init = acc.username ? acc.username.trim().charAt(0).toUpperCase() : "U";
-
-                      return (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => handleSwitch(acc)}
-                          disabled={isCurrent}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "6px 8px",
-                            background: isCurrent ? "var(--primary-light)" : "#f8fafc",
-                            border: isCurrent ? "1px solid var(--primary-subtle)" : "1px solid var(--border-color)",
-                            borderRadius: "var(--radius-sm)",
-                            cursor: isCurrent ? "default" : "pointer",
-                            textAlign: "left"
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div
-                              style={{
-                                width: "22px",
-                                height: "22px",
-                                borderRadius: "50%",
-                                background: "var(--primary)",
-                                color: "#fff",
-                                fontSize: "10px",
-                                fontWeight: "700",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                              }}
-                            >
-                              {init}
-                            </div>
-                            <span style={{ fontSize: "12px", fontWeight: isCurrent ? "700" : "500", color: "var(--text-dark)" }}>
-                              {acc.username} {isCurrent ? "(Active)" : ""}
-                            </span>
-                          </div>
-
-                          <span
-                            style={{
-                              fontSize: "9px",
-                              fontWeight: "700",
-                              padding: "1px 5px",
-                              borderRadius: "6px",
-                              background: acc.role === "Administrator" ? "#e0e7ff" : "#dcfce7",
-                              color: acc.role === "Administrator" ? "#4338ca" : "#15803d"
-                            }}
-                          >
-                            {acc.role}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
               <button className="popover-item danger-item" onClick={handleLogout}>
                 <LogOut size={16} />

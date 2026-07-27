@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Lightbulb,
   Clock,
@@ -7,31 +8,26 @@ import {
   Plus,
   Eye,
   UserCheck,
-  Inbox
+  Inbox,
+  Paperclip,
+  FileText,
+  Download
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
-import Input from "../../components/Input";
 import AdminDashboard from "./AdminDashboard";
-import { getSubmittedIdeas, saveNewIdea } from "../../utils/ideaStorage";
+import { getSubmittedIdeas } from "../../utils/ideaStorage";
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [userRole, setUserRole] = useState("User");
   const [userName, setUserName] = useState("Ayushman");
   const [userEmail, setUserEmail] = useState("");
-  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [viewingSubmission, setViewingSubmission] = useState(null);
 
   // User's Submitted Ideas from shared storage
   const [allIdeas, setAllIdeas] = useState([]);
-
-  // Form States
-  const [ideaTitle, setIdeaTitle] = useState("");
-  const [ideaCategory, setIdeaCategory] = useState("Healthcare");
-  const [problemStatement, setProblemStatement] = useState("");
-  const [ideaDescription, setIdeaDescription] = useState("");
-  const [expectedOutcome, setExpectedOutcome] = useState("");
 
   useEffect(() => {
     const savedUserStr = localStorage.getItem("currentUser");
@@ -54,27 +50,6 @@ function Dashboard() {
 
     setAllIdeas(getSubmittedIdeas());
   }, []);
-
-  const handleCreateIdea = (e) => {
-    e.preventDefault();
-    const updatedList = saveNewIdea({
-      title: ideaTitle,
-      category: ideaCategory,
-      author: userName || "User",
-      authorEmail: userEmail || "",
-      problemStatement: problemStatement,
-      description: ideaDescription,
-      expectedOutcome: expectedOutcome
-    });
-
-    setAllIdeas(updatedList);
-    alert(`Idea "${ideaTitle}" submitted successfully under category "${ideaCategory}"! It is now visible on the Administrator Screening queue.`);
-    setIdeaTitle("");
-    setProblemStatement("");
-    setIdeaDescription("");
-    setExpectedOutcome("");
-    setIsSubmitModalOpen(false);
-  };
 
   // If logged in as Administrator, render AdminDashboard component
   if (userRole === "Administrator") {
@@ -106,7 +81,7 @@ function Dashboard() {
           <Button
             variant="primary"
             icon={Plus}
-            onClick={() => setIsSubmitModalOpen(true)}
+            onClick={() => navigate("/submit-idea")}
           >
             Submit New Idea
           </Button>
@@ -235,91 +210,7 @@ function Dashboard() {
         </div>
       </Card>
 
-      {/* MODAL 1: Submit New Idea */}
-      <Modal
-        isOpen={isSubmitModalOpen}
-        onClose={() => setIsSubmitModalOpen(false)}
-        title="Submit Innovation Idea"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setIsSubmitModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleCreateIdea}>Submit Idea for Screening</Button>
-          </>
-        }
-      >
-        <form onSubmit={handleCreateIdea} className="auth-form">
-          <Input
-            label="Idea Title"
-            placeholder="e.g. Telehealth Remote Diagnostics System"
-            value={ideaTitle}
-            onChange={(e) => setIdeaTitle(e.target.value)}
-            required
-          />
-
-          <div className="input-field-group">
-            <label className="input-label">Industry Category <span style={{ color: "var(--danger)" }}>*</span></label>
-            <select
-              className="custom-input-elem custom-select-elem"
-              value={ideaCategory}
-              onChange={(e) => setIdeaCategory(e.target.value)}
-              required
-            >
-              <option value="Healthcare">Healthcare</option>
-              <option value="Insurance">Insurance</option>
-              <option value="Banking">Banking</option>
-              <option value="Manufacturing">Manufacturing</option>
-              <option value="Retail">Retail</option>
-              <option value="HR">HR</option>
-              <option value="Logistics">Logistics</option>
-              <option value="Government">Government</option>
-              <option value="Education">Education</option>
-              <option value="E-Commerce">E-Commerce</option>
-              <option value="Food & Beverage">Food & Beverage</option>
-              <option value="Transportation">Transportation</option>
-              <option value="Travel">Travel</option>
-              <option value="Others">Others</option>
-            </select>
-          </div>
-
-          <div className="input-field-group">
-            <label className="input-label">Problem Statement <span style={{ color: "var(--danger)" }}>*</span></label>
-            <textarea
-              className="custom-input-elem"
-              rows={3}
-              placeholder="Describe the exact problem, inefficiency, or pain point currently being faced..."
-              value={problemStatement}
-              onChange={(e) => setProblemStatement(e.target.value)}
-              required
-            ></textarea>
-          </div>
-
-          <div className="input-field-group">
-            <label className="input-label">Idea Description / Proposed Solution <span style={{ color: "var(--danger)" }}>*</span></label>
-            <textarea
-              className="custom-input-elem"
-              rows={4}
-              placeholder="Detailed description of your proposed innovative solution..."
-              value={ideaDescription}
-              onChange={(e) => setIdeaDescription(e.target.value)}
-              required
-            ></textarea>
-          </div>
-
-          <div className="input-field-group">
-            <label className="input-label">Expected Outcome & Impact <span style={{ color: "var(--danger)" }}>*</span></label>
-            <textarea
-              className="custom-input-elem"
-              rows={3}
-              placeholder="Detail expected business benefits, cost savings, ROI, or efficiency gains..."
-              value={expectedOutcome}
-              onChange={(e) => setExpectedOutcome(e.target.value)}
-              required
-            ></textarea>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL 2: View Submission Details */}
+      {/* MODAL: View Submission Details */}
       {viewingSubmission && (
         <Modal
           isOpen={Boolean(viewingSubmission)}
@@ -361,6 +252,41 @@ function Dashboard() {
                 {viewingSubmission.expectedOutcome || "No expected outcome recorded."}
               </p>
             </div>
+
+            {/* Attached File View */}
+            {viewingSubmission.attachment && (
+              <div>
+                <h4 className="modal-detail-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Paperclip size={14} /> Attached Document
+                </h4>
+                <div className="attachment-view-card" style={{ marginTop: "6px" }}>
+                  <div className="attachment-view-left">
+                    {viewingSubmission.attachment.fileType?.includes("image") ? (
+                      <div className="attachment-img-preview-box">
+                        <img src={viewingSubmission.attachment.fileData} alt="Attached File" />
+                      </div>
+                    ) : (
+                      <div className="attachment-pdf-big-icon">
+                        <FileText size={24} color="#4f46e5" />
+                      </div>
+                    )}
+                    <div className="attachment-file-info">
+                      <span className="attachment-file-name">{viewingSubmission.attachment.fileName}</span>
+                      <span className="attachment-file-meta">{viewingSubmission.attachment.fileSize}</span>
+                    </div>
+                  </div>
+                  <a
+                    href={viewingSubmission.attachment.fileData}
+                    download={viewingSubmission.attachment.fileName}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="attachment-download-btn"
+                  >
+                    <Download size={14} /> Download
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

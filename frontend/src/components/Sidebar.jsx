@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
+  Lightbulb,
   Filter,
+  FileCheck,
   CheckSquare,
   Users,
   BarChart,
@@ -38,8 +40,7 @@ function Sidebar({ isOpen }) {
   const adminNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { label: "Review Management", icon: CheckSquare, path: "/review-management" },
-    { label: "Decision Committee", icon: Users, path: "/decision-committee" },
+    { label: "Feasibility Review", icon: FileCheck, path: "/feasibility-review" },
     { label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
     { label: "Estimation", icon: Calculator, path: "/estimation" },
     { label: "Projects", icon: FolderKanban, path: "/projects" },
@@ -54,6 +55,7 @@ function Sidebar({ isOpen }) {
   // Clean User Navigation Items (Innovators/Employees)
   const userNavItems = [
     { label: "Dashboard (My Ideas)", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "Submit Idea", icon: Lightbulb, path: "/submit-idea" },
     { label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
     { label: "Settings", icon: Settings, path: "/settings" }
   ];

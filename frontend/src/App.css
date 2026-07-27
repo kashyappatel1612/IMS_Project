@@ -597,6 +597,43 @@ select.custom-input-elem option {
   border: 1px solid #86efac;
 }
 
+/* 6-Square OTP Input Grid Styling */
+.otp-boxes-container {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.otp-boxes-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.otp-digit-box {
+  height: 52px;
+  width: 100%;
+  font-size: 24px;
+  font-weight: 800;
+  text-align: center;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  color: var(--text-dark);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.otp-digit-box:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
 .strength-meter-container {
   display: flex;
   flex-direction: column;
@@ -1691,3 +1728,256 @@ select.custom-input-elem option {
 @media (max-width: 992px) {
   .kpi-4-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ==========================================================================
+   Attachment Upload & Screening Evaluation Workspace Styles
+   ========================================================================== */
+
+/* File Attachment Dropzone & Preview Styles */
+.attachment-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.attachment-dropzone:hover {
+  border-color: var(--primary);
+  background: #f0f3ff;
+}
+
+.attachment-dropzone-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.attachment-dropzone-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.attachment-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.attachment-preview-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attachment-img-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.attachment-img-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-pdf-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: #e0e7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachment-file-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.attachment-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.attachment-file-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.submit-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  margin-bottom: 40px;
+}
+
+/* Screening Evaluation 2-Column Workspace Grid */
+.screening-workspace-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.screening-left-col,
+.screening-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.idea-meta-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.screening-detail-block {
+  margin-bottom: 16px;
+}
+
+.screening-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.screening-text-box {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}
+
+.attachment-view-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.attachment-view-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attachment-img-preview-box {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.attachment-img-preview-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-pdf-big-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: #e0e7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachment-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.attachment-download-btn:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.attachment-none-box {
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.checklist-card-item {
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.screening-decision-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 8px;
+}
+
+@media (max-width: 992px) {
+  .screening-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

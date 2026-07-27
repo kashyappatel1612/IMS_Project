@@ -6,9 +6,10 @@ import MainLayout from "../layouts/MainLayout";
 
 // Core Stage Components (Serial-wise Flow)
 import Dashboard from "../pages/Dashboard/Dashboard";
+import SubmitIdea from "../pages/Dashboard/SubmitIdea";
 import InitialScreening from "../pages/InitialScreening/InitialScreening";
-import Reviews from "../pages/Reviews/Reviews";
-import DecisionCommittee from "../pages/DecisionCommittee/DecisionCommittee";
+import ScreeningEvaluation from "../pages/InitialScreening/ScreeningEvaluation";
+import FeasibilityReview from "../pages/Reviews/FeasibilityReview";
 import BusinessAnalysis from "../pages/BusinessAnalysis/BusinessAnalysis";
 import Estimation from "../pages/Estimation/Estimation";
 import ProjectList from "../pages/Projects/ProjectList";
@@ -36,15 +37,15 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          {/* Stage 1: Dashboard (User / Admin) */}
+          {/* Stage 1: Dashboard (User / Admin) & Submit Idea Page */}
           <Route path="/dashboard" element={<Dashboard />} />
-          {/* Stage 2: Initial Screening */}
+          <Route path="/submit-idea" element={<SubmitIdea />} />
+          {/* Stage 2: Initial Screening & Evaluation Page */}
           <Route path="/initial-screening" element={<InitialScreening />} />
-          {/* Stage 3: Review Management */}
-          <Route path="/review-management" element={<Reviews />} />
-          {/* Stage 4: Decision Committee */}
-          <Route path="/decision-committee" element={<DecisionCommittee />} />
-          {/* Stage 5: Business Analysis */}
+          <Route path="/screening-evaluation/:id" element={<ScreeningEvaluation />} />
+          {/* Stage 3: Feasibility Review (Technical, Functional, Business) */}
+          <Route path="/feasibility-review" element={<FeasibilityReview />} />
+          {/* Stage 4: Business Analysis */}
           <Route path="/business-analysis" element={<BusinessAnalysis />} />
           {/* Stage 6: Estimation & Budgeting */}
           <Route path="/estimation" element={<Estimation />} />
