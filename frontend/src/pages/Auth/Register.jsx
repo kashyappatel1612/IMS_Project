@@ -75,25 +75,44 @@ function Register() {
     }
     setLoading(true);
     setTimeout(() => {
-      const existingUserStr = localStorage.getItem("idea360User");
-      if (existingUserStr) {
+      let users = [];
+      const usersStr = localStorage.getItem("idea360Users");
+      if (usersStr) {
         try {
-          const existingUser = JSON.parse(existingUserStr);
-          if (existingUser.email.toLowerCase() === formData.email.trim().toLowerCase()) {
-            setError("Email address is already registered! Please sign in.");
-            setLoading(false);
-            return;
+          users = JSON.parse(usersStr);
+        } catch (err) {
+          users = [];
+        }
+      }
+
+      const existingSingle = localStorage.getItem("idea360User");
+      if (existingSingle) {
+        try {
+          const parsedSingle = JSON.parse(existingSingle);
+          if (!users.some((u) => u.email.toLowerCase() === parsedSingle.email.toLowerCase())) {
+            users.push(parsedSingle);
           }
         } catch (err) {
           console.error(err);
         }
       }
+
+      if (users.some((u) => u.email.toLowerCase() === formData.email.trim().toLowerCase())) {
+        setError("Email address is already registered! Please sign in.");
+        setLoading(false);
+        return;
+      }
+
       const newUser = {
         username: formData.username.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        role: role
+        role: role,
+        employeeId: role === "Administrator" ? formData.adminKey.trim() : ""
       };
+
+      users.push(newUser);
+      localStorage.setItem("idea360Users", JSON.stringify(users));
       localStorage.setItem("idea360User", JSON.stringify(newUser));
       localStorage.setItem("authFlash", `Account created as ${role}! Please sign in.`);
 

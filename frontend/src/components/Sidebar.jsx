@@ -34,7 +34,6 @@ function Sidebar({ isOpen }) {
       }
     }
   }, [location]);
-
   // Full Admin Navigation Items
   const adminNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },

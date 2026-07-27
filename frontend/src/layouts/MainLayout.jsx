@@ -22,5 +22,4 @@ function MainLayout() {
     </div>
   );
 }
-
 export default MainLayout;

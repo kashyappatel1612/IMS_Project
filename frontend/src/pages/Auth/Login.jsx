@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, CheckCircle2, User, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, CheckCircle2, User, ShieldCheck, KeyRound } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import imsLogo from "../../assets/ims-logo.jpg";
@@ -11,11 +11,14 @@ function Login() {
   const [role, setRole] = useState("Administrator"); // 'User' | 'Administrator'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const VALID_ADMIN_KEYS = ["IMS-ADMIN-2026", "EMP-ADMIN-101", "ADMIN123"];
 
   useEffect(() => {
     const flash = localStorage.getItem("authFlash");
@@ -39,55 +42,110 @@ function Login() {
       return;
     }
 
+    if (role === "Administrator" && !employeeId.trim()) {
+      setError("Employee ID / Admin Key is required for Administrator sign in.");
+      return;
+    }
+
     setLoading(true);
 
     setTimeout(() => {
-      const savedUserStr = localStorage.getItem("idea360User");
-
-      // Default demo login check for admin@imsgroup.com / admin123
+      // 1. Check Demo Admin Account
       if (email.trim().toLowerCase() === "admin@imsgroup.com" && password === "admin123") {
+        if (role !== "Administrator") {
+          setError("This account is registered as Administrator. You cannot log in under the User role!");
+          setLoading(false);
+          return;
+        }
+        if (!VALID_ADMIN_KEYS.includes(employeeId.trim().toUpperCase())) {
+          setError("Invalid Employee ID / Admin Key! Use IMS-ADMIN-2026 or EMP-ADMIN-101.");
+          setLoading(false);
+          return;
+        }
         const adminAcc = {
           username: "Ayushman Raj",
           email: "admin@imsgroup.com",
-          role: role
+          role: "Administrator",
+          employeeId: employeeId.trim()
         };
         switchAccount(adminAcc, navigate);
         return;
       }
 
-      if (!savedUserStr) {
-        setError("No account found with this email! Please register first or use admin@imsgroup.com");
+      // 2. Fetch users list from localStorage
+      let users = [];
+      const usersStr = localStorage.getItem("idea360Users");
+      if (usersStr) {
+        try {
+          users = JSON.parse(usersStr);
+        } catch (err) {
+          users = [];
+        }
+      }
+
+      const singleUserStr = localStorage.getItem("idea360User");
+      if (singleUserStr) {
+        try {
+          const singleUser = JSON.parse(singleUserStr);
+          if (!users.some((u) => u.email.toLowerCase() === singleUser.email.toLowerCase())) {
+            users.push(singleUser);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      const foundUser = users.find(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+      );
+
+      if (!foundUser) {
+        setError("Account not found! Check your email address or register first.");
         setLoading(false);
         return;
       }
 
-      try {
-        const savedUser = JSON.parse(savedUserStr);
-
-        if (savedUser.email.toLowerCase() !== email.trim().toLowerCase()) {
-          setError("Account not found! Check your email address or register.");
-          setLoading(false);
-          return;
-        }
-
-        if (savedUser.password !== password) {
-          setError("Incorrect password! Please try again.");
-          setLoading(false);
-          return;
-        }
-
-        // Login successful
-        const loggedInAcc = {
-          username: savedUser.username || "User",
-          email: savedUser.email,
-          role: role
-        };
-        switchAccount(loggedInAcc, navigate);
-      } catch (err) {
-        console.error("Auth Parse Error", err);
-        setError("Authentication failed. Please try again.");
+      // 3. Strict Role Matching Check
+      if (foundUser.role && foundUser.role !== role) {
+        setError(
+          `This account was created as "${foundUser.role}". You cannot sign in under "${role}" role! Please select the ${foundUser.role} tab.`
+        );
         setLoading(false);
+        return;
       }
+
+      // 4. Employee ID Check for Administrator logins
+      if (role === "Administrator") {
+        const enteredKey = employeeId.trim().toUpperCase();
+        const savedKey = (foundUser.employeeId || "").toUpperCase();
+        if (savedKey) {
+          if (savedKey !== enteredKey) {
+            setError("Incorrect Employee ID for this Administrator account!");
+            setLoading(false);
+            return;
+          }
+        } else if (!VALID_ADMIN_KEYS.includes(enteredKey)) {
+          setError("Invalid Admin Authorization Key / Employee ID!");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 5. Password Check
+      if (foundUser.password !== password) {
+        setError("Incorrect password! Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Login Successful
+      const loggedInAcc = {
+        username: foundUser.username || "User",
+        email: foundUser.email,
+        role: foundUser.role || role,
+        employeeId: foundUser.employeeId || employeeId
+      };
+      switchAccount(loggedInAcc, navigate);
     }, 400);
   };
 
@@ -151,6 +209,19 @@ function Login() {
             icon={Mail}
             required
           />
+
+          {role === "Administrator" && (
+            <Input
+              label="Employee ID / Admin Key"
+              type="text"
+              placeholder="e.g. IMS-ADMIN-2026 or EMP-ADMIN-101"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              icon={KeyRound}
+              helperText="Enter your official Admin Employee ID"
+              required
+            />
+          )}
 
           <Input
             label="Password"

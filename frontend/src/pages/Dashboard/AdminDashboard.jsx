@@ -26,10 +26,9 @@ function AdminDashboard({ userName }) {
   }, []);
 
   const handleApproveIdea = (id) => {
-    const updated = updateIdeaStatus(id, "Approved & Sent to Initial Screening");
+    const updated = updateIdeaStatus(id, "Sent to Initial Screening");
     setAllIdeas(updated);
-    alert(`Idea #${id} Approved! Opening Initial Screening page...`);
-    navigate("/initial-screening");
+    alert(`Idea successfully sent to Initial Screening! It is now visible on the Initial Screening page.`);
   };
 
   const handleViewIdea = (id) => {
@@ -243,7 +242,7 @@ function AdminDashboard({ userName }) {
                   </tr>
                 ) : (
                   activeQueue.map((item) => {
-                    const isApproved = item.status.includes("Approved") || item.status.includes("Screening");
+                    const isSent = item.status !== "Pending Review";
 
                     return (
                       <tr key={item.id}>
@@ -253,7 +252,7 @@ function AdminDashboard({ userName }) {
                         <td>
                           <span
                             className={`table-badge ${
-                              isApproved ? "badge-approved" : "badge-review"
+                              isSent ? "badge-approved" : "badge-review"
                             }`}
                           >
                             {item.status}
@@ -263,23 +262,25 @@ function AdminDashboard({ userName }) {
                           <div className="table-actions-flex">
                             <Button
                               size="sm"
-                              variant="primary"
+                              variant={isSent ? "ghost" : "primary"}
                               icon={ArrowRight}
                               onClick={() => handleApproveIdea(item.id)}
-                              disabled={isApproved}
+                              disabled={isSent}
                               title="Send to Initial Screening Page"
                             >
-                              Send to Screening
+                              {isSent ? "Sent to Screening" : "Send to Initial Screening"}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              icon={Eye}
-                              onClick={() => handleViewIdea(item.id)}
-                              title="View & Open Initial Screening Page"
-                            >
-                              View Screening
-                            </Button>
+                            {isSent && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                icon={Eye}
+                                onClick={() => handleViewIdea(item.id)}
+                                title="View & Open Initial Screening Page"
+                              >
+                                View Screening
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

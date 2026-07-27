@@ -69,9 +69,9 @@ function InitialScreening() {
     setIsEvaluationModalOpen(false);
   };
 
-  // Filter ideas for screening queue
+  // Filter ideas for screening queue: Exclude "Pending Review" ideas until explicitly sent by Admin
   const screeningQueue = ideas.filter(
-    (i) => i.status.includes("Approved") || i.status.includes("Screening") || i.status === "Pending Review"
+    (i) => i.status !== "Pending Review"
   );
 
   return (
@@ -168,14 +168,14 @@ function InitialScreening() {
               </tr>
             </thead>
             <tbody>
-              {ideas.length === 0 ? (
+              {screeningQueue.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "20px" }}>
-                    No ideas currently in screening queue.
+                    No ideas currently in screening queue. Submissions sent by Admin from the Admin Dashboard will appear here.
                   </td>
                 </tr>
               ) : (
-                ideas.map((item) => {
+                screeningQueue.map((item) => {
                   const isPassed = item.status.includes("Passed");
                   const isRejected = item.status.includes("Rejected");
 
