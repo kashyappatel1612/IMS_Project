@@ -23,11 +23,17 @@ function SubmitIdea() {
   const [userName, setUserName] = useState("Ayushman");
   const [userEmail, setUserEmail] = useState("");
 
-  // Form Fields
+  // Form Fields - Section 1: Overview & Categorization
   const [ideaTitle, setIdeaTitle] = useState("");
   const [ideaCategory, setIdeaCategory] = useState("Healthcare");
+  const [functionalArea, setFunctionalArea] = useState("");
+  const [targetUser, setTargetUser] = useState("");
+
+  // Form Fields - Section 2: Problem & Solution Statement
   const [problemStatement, setProblemStatement] = useState("");
   const [ideaDescription, setIdeaDescription] = useState("");
+  const [proposedSolution, setProposedSolution] = useState("");
+  const [expectedBenefits, setExpectedBenefits] = useState("");
 
   // File Attachment State
   const [attachment, setAttachment] = useState(null); // { fileName, fileType, fileSize, fileData }
@@ -50,7 +56,6 @@ function SubmitIdea() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert("File size exceeds 5MB limit. Please upload a smaller file.");
       return;
@@ -93,7 +98,7 @@ function SubmitIdea() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!ideaTitle.trim() || !problemStatement.trim() || !ideaDescription.trim()) {
+    if (!ideaTitle.trim() || !problemStatement.trim() || !ideaDescription.trim() || !functionalArea.trim() || !targetUser.trim() || !expectedBenefits.trim()) {
       alert("Please fill in all required fields.");
       return;
     }
@@ -104,11 +109,15 @@ function SubmitIdea() {
       await saveNewIdea({
         title: ideaTitle,
         category: ideaCategory,
+        functionalArea: functionalArea,
+        targetUser: targetUser,
         author: userName || "User",
         authorEmail: userEmail || "",
         problemStatement: problemStatement,
         description: ideaDescription,
-        expectedOutcome: "",
+        proposedSolution: proposedSolution,
+        expectedBenefits: expectedBenefits,
+        expectedOutcome: expectedBenefits,
         attachment: attachment
       });
 
@@ -159,6 +168,7 @@ function SubmitIdea() {
       {/* Main Submission Form Container */}
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         <form onSubmit={handleSubmit}>
+          {/* Section 1: Overview & Categorization */}
           <Card title="1. Overview & Categorization" subtitle="Title and industry domain for your idea">
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
               <Input
@@ -171,7 +181,7 @@ function SubmitIdea() {
 
               <div className="input-field-group">
                 <label className="input-label">
-                  Industry Category <span style={{ color: "var(--danger)" }}>*</span>
+                  Industry Domain <span style={{ color: "var(--danger)" }}>*</span>
                 </label>
                 <select
                   className="custom-input-elem custom-select-elem"
@@ -185,7 +195,7 @@ function SubmitIdea() {
                   <option value="Manufacturing">Manufacturing</option>
                   <option value="Retail">Retail</option>
                   <option value="HR">HR</option>
-                  <option value="HR">Automation</option>
+                  <option value="Automation">Automation</option>
                   <option value="Logistics">Logistics</option>
                   <option value="Government">Government</option>
                   <option value="Education">Education</option>
@@ -196,11 +206,28 @@ function SubmitIdea() {
                   <option value="Others">Others</option>
                 </select>
               </div>
+
+              <Input
+                label="Functional Area"
+                placeholder="e.g. Operations, Finance, HR, IT, Marketing, Supply Chain"
+                value={functionalArea}
+                onChange={(e) => setFunctionalArea(e.target.value)}
+                required
+              />
+
+              <Input
+                label="Target User"
+                placeholder="e.g. End Customers, Internal Staff, Field Agents, Executive Committee"
+                value={targetUser}
+                onChange={(e) => setTargetUser(e.target.value)}
+                required
+              />
             </div>
           </Card>
 
           <div style={{ height: "20px" }}></div>
 
+          {/* Section 2: Problem & Solution Statement */}
           <Card title="2. Problem & Solution Statement" subtitle="Detailed explanation of the problem and proposed solution">
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
               <div className="input-field-group">
@@ -223,10 +250,37 @@ function SubmitIdea() {
                 </label>
                 <textarea
                   className="custom-input-elem"
-                  rows={5}
-                  placeholder="Detailed breakdown of how your innovative solution addresses the problem..."
+                  rows={4}
+                  placeholder="Detailed breakdown of how your innovative concept addresses the problem..."
                   value={ideaDescription}
                   onChange={(e) => setIdeaDescription(e.target.value)}
+                  required
+                ></textarea>
+              </div>
+
+              <div className="input-field-group">
+                <label className="input-label">
+                  Proposed Solution <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "normal" }}>(Optional)</span>
+                </label>
+                <textarea
+                  className="custom-input-elem"
+                  rows={4}
+                  placeholder="Specific technical, process, or architectural solution proposed to address the issue..."
+                  value={proposedSolution}
+                  onChange={(e) => setProposedSolution(e.target.value)}
+                ></textarea>
+              </div>
+
+              <div className="input-field-group">
+                <label className="input-label">
+                  Expected Benefits <span style={{ color: "var(--danger)" }}>*</span>
+                </label>
+                <textarea
+                  className="custom-input-elem"
+                  rows={4}
+                  placeholder="Quantifiable benefits e.g. 30% reduction in processing time, $50K annual savings, enhanced UX..."
+                  value={expectedBenefits}
+                  onChange={(e) => setExpectedBenefits(e.target.value)}
                   required
                 ></textarea>
               </div>
@@ -235,16 +289,14 @@ function SubmitIdea() {
 
           <div style={{ height: "20px" }}></div>
 
+          {/* Section 3: Supporting Attachments */}
           <Card title="3. Supporting Attachments" subtitle="Upload PDF documents or image files">
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
-
-              {/* ATTACHMENT UPLOAD SECTION */}
               <div className="input-field-group">
                 <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <Paperclip size={16} /> Supporting Attachment (PDF or Image)
                 </label>
 
-                {/* Hidden File Input */}
                 <input
                   type="file"
                   ref={fileInputRef}

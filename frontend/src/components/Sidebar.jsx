@@ -5,8 +5,6 @@ import {
   Lightbulb,
   Filter,
   FileCheck,
-  CheckSquare,
-  Users,
   BarChart,
   Calculator,
   FolderKanban,
@@ -36,31 +34,70 @@ function Sidebar({ isOpen }) {
       }
     }
   }, [location]);
-  // Full Admin Navigation Items
-  const adminNavItems = [
-    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { label: "Feasibility Review", icon: FileCheck, path: "/feasibility-review" },
-    { label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
-    { label: "Estimation", icon: Calculator, path: "/estimation" },
-    { label: "Projects", icon: FolderKanban, path: "/projects" },
-    { label: "Execution", icon: PlayCircle, path: "/execution" },
-    { label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
-    { label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
-    { label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
-    { label: "Reports", icon: FileBarChart, path: "/reports" },
-    { label: "Settings", icon: Settings, path: "/settings" }
+
+  // Full Navigation Items List
+  const allNavItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
+    { id: "feasibility-review", label: "Feasibility Review", icon: FileCheck, path: "/feasibility-review" },
+    { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
+    { id: "estimation", label: "Estimation", icon: Calculator, path: "/estimation" },
+    { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
+    { id: "execution", label: "Execution", icon: PlayCircle, path: "/execution" },
+    { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
+    { id: "benefits-tracking", label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
+    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
+    { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
   ];
 
-  // Clean User Navigation Items (Innovators/Employees)
+  // User Navigation Items
   const userNavItems = [
-    { label: "Dashboard (My Ideas)", icon: LayoutDashboard, path: "/dashboard" },
-    { label: "Submit Idea", icon: Lightbulb, path: "/submit-idea" },
-    { label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
-    { label: "Settings", icon: Settings, path: "/settings" }
+    { id: "dashboard", label: "Dashboard (My Ideas)", icon: LayoutDashboard, path: "/dashboard" },
+    { id: "submit-idea", label: "Submit Idea", icon: Lightbulb, path: "/submit-idea" },
+    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
   ];
 
-  const currentNavItems = userRole === "Administrator" ? adminNavItems : userNavItems;
+  // Role-Specific Navigation Menu Logic
+  const getMenuForRole = () => {
+    if (userRole === "Administrator") {
+      return allNavItems;
+    }
+
+    if (userRole === "Business Analyst") {
+      // HIDE Initial Screening & Feasibility Review
+      return allNavItems.filter(
+        (item) => item.id !== "initial-screening" && item.id !== "feasibility-review"
+      );
+    }
+
+    if (userRole === "Reviewer") {
+      // HIDE Initial Screening only
+      return allNavItems.filter((item) => item.id !== "initial-screening");
+    }
+
+    if (userRole === "Project Manager") {
+      // HIDE everything above Projects (Initial Screening, Feasibility Review, Business Analysis, Estimation)
+      return allNavItems.filter((item) => {
+        if (item.id === "dashboard") return true;
+        if (
+          item.id === "initial-screening" ||
+          item.id === "feasibility-review" ||
+          item.id === "business-analysis" ||
+          item.id === "estimation"
+        ) {
+          return false;
+        }
+        return true; // Projects, Execution, Progress Tracking, Benefits Tracking, Knowledge Base, Reports, Settings
+      });
+    }
+
+    // Default 'User' Role
+    return userNavItems;
+  };
+
+  const currentNavItems = getMenuForRole();
 
   return (
     <aside className={`app-sidebar ${isOpen ? "open" : ""}`}>
@@ -70,7 +107,7 @@ function Sidebar({ isOpen }) {
           <div className="brand-text-col">
             <span className="brand-text">Idea360</span>
             <span className="brand-subtext">
-              {userRole === "Administrator" ? "Admin Portal" : "Employee Portal"}
+              {userRole} Portal
             </span>
           </div>
         </div>

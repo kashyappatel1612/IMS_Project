@@ -46,11 +46,15 @@ export async function saveNewIdea(newIdea) {
     id: tempId,
     title: newIdea.title,
     category: newIdea.category,
+    functionalArea: newIdea.functionalArea || "",
+    targetUser: newIdea.targetUser || "",
     author: newIdea.author || "User",
     authorEmail: newIdea.authorEmail || "",
     problemStatement: newIdea.problemStatement || "",
     description: newIdea.description || "",
-    expectedOutcome: newIdea.expectedOutcome || "",
+    proposedSolution: newIdea.proposedSolution || "",
+    expectedBenefits: newIdea.expectedBenefits || "",
+    expectedOutcome: newIdea.expectedBenefits || newIdea.expectedOutcome || "",
     attachment: newIdea.attachment || null
   };
 

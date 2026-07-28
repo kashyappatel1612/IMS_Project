@@ -64,6 +64,9 @@ function ScreeningEvaluation() {
     );
   }
 
+  const isPassed = idea.status.includes("Passed") || idea.status.includes("Approved");
+  const isRejected = idea.status.includes("Rejected");
+
   const handlePassScreening = () => {
     updateIdeaStatus(idea.id, "Passed Initial Screening", evaluatorNotes);
     alert(`Idea "${idea.title}" passed Initial Screening! Sent to Feasibility Review.`);
@@ -121,7 +124,7 @@ function ScreeningEvaluation() {
 
               <div className="idea-meta-pills-row" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: "none" }}>
                 <span className="meta-pill">
-                  <Building2 size={13} /> Category: {idea.category}
+                  <Building2 size={13} /> Domain: {idea.category}
                 </span>
                 <span className="meta-pill">
                   <User size={13} /> Author: {idea.author}
@@ -129,7 +132,7 @@ function ScreeningEvaluation() {
                 <span className="meta-pill">
                   <Calendar size={13} /> Date: {idea.date}
                 </span>
-                <span className={`table-badge ${idea.status.includes("Passed") ? "badge-approved" : idea.status.includes("Rejected") ? "badge-rejected" : "badge-review"}`}>
+                <span className={`table-badge ${isPassed ? "badge-approved" : isRejected ? "badge-rejected" : "badge-review"}`}>
                   {idea.status}
                 </span>
               </div>
@@ -147,11 +150,29 @@ function ScreeningEvaluation() {
               </div>
 
               <div className="screening-detail-block" style={{ marginBottom: 0 }}>
-                <h4 className="screening-section-label">Idea Description / Proposed Solution</h4>
+                <h4 className="screening-section-label">Idea Description</h4>
                 <div className="screening-text-box">
-                  {idea.description || "No detailed solution description provided."}
+                  {idea.description || "No detailed idea description provided."}
                 </div>
               </div>
+
+              {idea.proposedSolution && (
+                <div className="screening-detail-block" style={{ marginBottom: 0 }}>
+                  <h4 className="screening-section-label">Proposed Solution</h4>
+                  <div className="screening-text-box">
+                    {idea.proposedSolution}
+                  </div>
+                </div>
+              )}
+
+              {(idea.expectedBenefits || idea.expectedOutcome) && (
+                <div className="screening-detail-block" style={{ marginBottom: 0 }}>
+                  <h4 className="screening-section-label">Expected Benefits</h4>
+                  <div className="screening-text-box">
+                    {idea.expectedBenefits || idea.expectedOutcome}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -279,38 +300,52 @@ function ScreeningEvaluation() {
                 ></textarea>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons with Strict Mutual Exclusion */}
               <div className="screening-decision-box">
                 <h4 style={{ fontSize: "14px", fontWeight: "700", marginBottom: "12px", color: "var(--text-dark)" }}>
                   Screening Final Decision
                 </h4>
 
-                <Button
-                  variant="primary"
-                  icon={ArrowRight}
-                  onClick={handlePassScreening}
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  Pass & Send to Feasibility Review
-                </Button>
+                {isRejected ? (
+                  <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "12px", borderRadius: "8px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <XCircle size={20} />
+                    <span>Status: Rejected (Approve Action Disabled)</span>
+                  </div>
+                ) : isPassed ? (
+                  <div style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", padding: "12px", borderRadius: "8px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <CheckCircle2 size={20} />
+                    <span>Status: Passed Screening (Reject Action Disabled)</span>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="primary"
+                      icon={ArrowRight}
+                      onClick={handlePassScreening}
+                      style={{ width: "100%", justifyContent: "center" }}
+                    >
+                      Pass & Send to Feasibility Review
+                    </Button>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
-                  <Button
-                    variant="outline"
-                    icon={HelpCircle}
-                    onClick={handleRequestInfo}
-                  >
-                    Request Info
-                  </Button>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+                      <Button
+                        variant="outline"
+                        icon={HelpCircle}
+                        onClick={handleRequestInfo}
+                      >
+                        Request Info
+                      </Button>
 
-                  <Button
-                    variant="danger"
-                    icon={X}
-                    onClick={handleRejectScreening}
-                  >
-                    Reject Idea
-                  </Button>
-                </div>
+                      <Button
+                        variant="danger"
+                        icon={X}
+                        onClick={handleRejectScreening}
+                      >
+                        Reject Idea
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </Card>

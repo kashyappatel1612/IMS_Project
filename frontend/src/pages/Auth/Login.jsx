@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, CheckCircle2, User, ShieldCheck, KeyRound } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, CheckCircle2, UserCheck } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import imsLogo from "../../assets/ims-logo.jpg";
@@ -9,17 +9,14 @@ import { loginUser } from "../../services/api";
 
 function Login() {
   const navigate = useNavigate();
-  const [role, setRole] = useState("Administrator"); // 'User' | 'Administrator'
+  const [role, setRole] = useState("User");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const VALID_ADMIN_KEYS = ["IMS-ADMIN-2026", "EMP-ADMIN-101", "ADMIN123"];
 
   useEffect(() => {
     const flash = localStorage.getItem("authFlash");
@@ -38,104 +35,43 @@ function Login() {
     setError("");
     setSuccessMsg("");
 
-    if (!email.trim() || !password) {
-      setError("Please enter both email and password.");
-      return;
-    }
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (role === "Administrator" && !employeeId.trim()) {
-      setError("Employee ID / Admin Key is required for Administrator sign in.");
+    if (!cleanEmail || !password) {
+      setError("Please enter both email and password.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Try Backend PostgreSQL Auth API
-      const response = await loginUser({ email, password, role, employeeId });
+      // 1. Authenticate against PostgreSQL FastAPI Backend (Single Source of Truth)
+      const response = await loginUser({ email: cleanEmail, password, role });
+      setLoading(false);
+
       if (response && response.user) {
-        switchAccount(response.user, navigate);
+        // Authenticated successfully via DB
+        const userObj = {
+          id: response.user.id,
+          username: response.user.username,
+          email: response.user.email,
+          role: response.user.role || role,
+          employeeId: response.user.employeeId || ""
+        };
+        switchAccount(userObj, navigate);
         return;
       }
     } catch (apiErr) {
-      console.warn("Backend Auth Notice:", apiErr.message);
-
-      // Fallback to local authentication
-      if (email.trim().toLowerCase() === "admin@imsgroup.com" && password === "admin123") {
-        if (role !== "Administrator") {
-          setError("This account is registered as Administrator. You cannot log in under the User role!");
-          setLoading(false);
-          return;
-        }
-        if (!VALID_ADMIN_KEYS.includes(employeeId.trim().toUpperCase())) {
-          setError("Invalid Employee ID / Admin Key! Use IMS-ADMIN-2026 or EMP-ADMIN-101.");
-          setLoading(false);
-          return;
-        }
-        const adminAcc = {
-          username: "Ayushman Raj",
-          email: "admin@imsgroup.com",
-          role: "Administrator",
-          employeeId: employeeId.trim()
-        };
-        switchAccount(adminAcc, navigate);
-        return;
-      }
-
-      let users = [];
-      const usersStr = localStorage.getItem("idea360Users");
-      if (usersStr) {
-        try { users = JSON.parse(usersStr); } catch (err) { users = []; }
-      }
-
-      const singleUserStr = localStorage.getItem("idea360User");
-      if (singleUserStr) {
-        try {
-          const singleUser = JSON.parse(singleUserStr);
-          if (!users.some((u) => u.email.toLowerCase() === singleUser.email.toLowerCase())) {
-            users.push(singleUser);
-          }
-        } catch (err) { console.error(err); }
-      }
-
-      const foundUser = users.find(
-        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-      );
-
-      if (!foundUser) {
-        setError(apiErr.message || "Account not found! Check your email address or register first.");
-        setLoading(false);
-        return;
-      }
-
-      if (foundUser.role && foundUser.role !== role) {
-        setError(
-          `This account was created as "${foundUser.role}". You cannot sign in under "${role}" role!`
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (foundUser.password !== password) {
-        setError("Incorrect password! Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      const loggedInAcc = {
-        username: foundUser.username || "User",
-        email: foundUser.email,
-        role: foundUser.role || role,
-        employeeId: foundUser.employeeId || employeeId
-      };
-      switchAccount(loggedInAcc, navigate);
+      setLoading(false);
+      // DISPLAY BACKEND AUTHENTICATION ERROR DIRECTLY (No local bypass allowed!)
+      setError(apiErr.message || `Account not found for "${cleanEmail}". You must register an account first before signing in!`);
     }
   };
 
   return (
     <div className="auth-page">
       <div className="auth-card">
-        {/* Side-by-Side Logo & Heading */}
+        {/* Brand Header */}
         <div className="auth-brand-header">
           <img src={imsLogo} alt="IMS Group" className="auth-brand-logo" />
           <div className="auth-brand-titles">
@@ -159,28 +95,24 @@ function Login() {
         )}
 
         <form onSubmit={handleLogin} className="auth-form">
-          {/* Role Selection Field */}
-          <div className="role-selector-container">
-            <label className="role-selector-label">Select Account Role</label>
-            <div className="role-tabs-grid">
-              <button
-                type="button"
-                className={`role-tab-btn ${role === "User" ? "active" : ""}`}
-                onClick={() => setRole("User")}
-              >
-                <User size={15} />
-                <span>User</span>
-              </button>
-
-              <button
-                type="button"
-                className={`role-tab-btn ${role === "Administrator" ? "active" : ""}`}
-                onClick={() => setRole("Administrator")}
-              >
-                <ShieldCheck size={15} />
-                <span>Administrator</span>
-              </button>
-            </div>
+          {/* Select Account Role Dropdown */}
+          <div className="input-field-group">
+            <label className="input-label" style={{ fontWeight: "700", color: "var(--text-dark)" }}>
+              Select Account Role <span style={{ color: "var(--danger)" }}>*</span>
+            </label>
+            <select
+              className="custom-input-elem custom-select-elem"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              style={{ fontSize: "14px", padding: "11px 14px", fontWeight: "600", width: "100%" }}
+              required
+            >
+              <option value="User">User</option>
+              <option value="Administrator">Administrator</option>
+              <option value="Business Analyst">Business Analyst</option>
+              <option value="Reviewer">Reviewer</option>
+              <option value="Project Manager">Project Manager</option>
+            </select>
           </div>
 
           <Input
@@ -192,19 +124,6 @@ function Login() {
             icon={Mail}
             required
           />
-
-          {role === "Administrator" && (
-            <Input
-              label="Employee ID / Admin Key"
-              type="text"
-              placeholder="e.g. IMS-ADMIN-2026 or EMP-ADMIN-101"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              icon={KeyRound}
-              helperText="Enter your official Admin Employee ID"
-              required
-            />
-          )}
 
           <Input
             label="Password"
@@ -256,4 +175,5 @@ function Login() {
     </div>
   );
 }
+
 export default Login;

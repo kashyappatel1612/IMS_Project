@@ -1,0 +1,10 @@
+
+## backend
+python -m uvicorn main:app --host 127.0.0.1 --port 5000 --reload
+
+## frontend
+cd frontend 
+npm run dev
+
+## venv activate
+.\venv\Scripts\Activate.ps1

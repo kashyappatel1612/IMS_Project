@@ -18,7 +18,13 @@ export async function loginUser(credentials) {
     }
     return res.data;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to log in. Please check backend API server.");
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      (err.message?.includes("Network Error")
+        ? "Unable to connect to FastAPI backend server. Please make sure main.py is running."
+        : "Failed to log in. Account not found or incorrect credentials.");
+    throw new Error(errorMsg);
   }
 }
 
@@ -27,7 +33,11 @@ export async function registerUser(userData) {
     const res = await apiClient.post("/auth/register", userData);
     return res.data;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to register. Please check backend API server.");
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to register account. Email might already exist.";
+    throw new Error(errorMsg);
   }
 }
 
@@ -39,7 +49,11 @@ export async function verifyOtpApi({ email, otpCode }) {
     }
     return res.data;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Invalid or expired OTP code!");
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Invalid or expired OTP code! Please check your email inbox.";
+    throw new Error(errorMsg);
   }
 }
 
@@ -48,7 +62,11 @@ export async function resendOtpApi({ email }) {
     const res = await apiClient.post("/auth/resend-otp", { email });
     return res.data;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to resend OTP.");
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to resend OTP code.";
+    throw new Error(errorMsg);
   }
 }
 
@@ -60,7 +78,11 @@ export async function updateUserProfile(profileData) {
     }
     return res.data;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to update profile.");
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to update user profile.";
+    throw new Error(errorMsg);
   }
 }
 
@@ -70,7 +92,7 @@ export async function fetchAllIdeas() {
     const res = await apiClient.get("/ideas");
     return res.data;
   } catch (err) {
-    console.warn("Backend API offline, reading from local fallback:", err.message);
+    console.warn("Backend API notice, reading from local cache:", err.message);
     const cached = localStorage.getItem("idea360SubmittedIdeas");
     return cached ? JSON.parse(cached) : [];
   }
@@ -81,7 +103,7 @@ export async function postNewIdea(ideaData) {
     const res = await apiClient.post("/ideas", ideaData);
     return res.data;
   } catch (err) {
-    console.warn("Backend API notice, saving to local fallback:", err.message);
+    console.warn("Backend API notice, saving to local cache:", err.message);
     return null;
   }
 }
@@ -91,7 +113,7 @@ export async function patchIdeaStatus(id, status, evaluatorNotes = "") {
     const res = await apiClient.patch(`/ideas/${id}/status`, { status, evaluatorNotes });
     return res.data;
   } catch (err) {
-    console.warn("Backend API notice, updating local fallback:", err.message);
+    console.warn("Backend API notice, updating local cache:", err.message);
     return null;
   }
 }

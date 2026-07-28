@@ -1,0 +1,357 @@
+import os
+import random
+import smtplib
+import bcrypt
+import jwt
+import threading
+from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+import schemas
+import database
+
+# Load environment variables
+load_dotenv()
+
+app = FastAPI(
+    title="Idea360 API Server",
+    description="Python FastAPI Backend for Idea360 Innovation Portal",
+    version="1.0.0"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+JWT_SECRET = os.getenv("JWT_SECRET", "idea360_super_secret_key_2026")
+SMTP_USER = (os.getenv("SMTP_USER") or "").strip()
+SMTP_PASS = (os.getenv("SMTP_PASS") or "").replace(" ", "")
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+
+def hash_password(password: str) -> str:
+    pwd_bytes = password.encode('utf-8')[:72]
+    salt = bcrypt.gensalt(10)
+    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        pwd_bytes = plain_password.encode('utf-8')[:72]
+        hash_bytes = hashed_password.encode('utf-8')
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except Exception as e:
+        print("Password verification error:", e)
+        return False
+
+def generate_jwt_token(user_id: int, email: str, role: str, username: str) -> str:
+    expiration = datetime.now(timezone.utc) + timedelta(days=7)
+    payload = {
+        "id": user_id,
+        "email": email,
+        "role": role,
+        "username": username,
+        "exp": expiration
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+def send_otp_email_smtp(to_email: str, otp_code: str):
+    print(f"[OTP GENERATED] Sending to {to_email}...")
+    
+    if not (SMTP_USER and SMTP_PASS):
+        print(f"[EMAIL ERROR] SMTP_USER or SMTP_PASS missing in backend/.env")
+        return
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Idea360 OTP Code: {otp_code}"
+    msg["From"] = SMTP_USER
+    msg["To"] = to_email
+
+    plain_text = f"Your Idea360 verification OTP code is: {otp_code}\nThis code will expire in 15 minutes."
+    
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; background: #ffffff;">
+      <h2 style="color: #4f46e5; margin-top: 0;">Idea360 Email Verification</h2>
+      <p>Your one-time verification code for registration is:</p>
+      <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5; margin: 20px 0;">
+        {otp_code}
+      </div>
+      <p style="font-size: 13px; color: #64748b;">This code will expire in 15 minutes. If you did not request this, please ignore this email.</p>
+    </div>
+    """
+    
+    msg.attach(MIMEText(plain_text, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_USER, to_email, msg.as_string())
+            print(f"[SUCCESS] OTP Email delivered to {to_email} via Gmail SMTP!")
+            return
+    except Exception as err1:
+        print(f"[SMTP Port 587 Warning: {err1}], trying Port 465...")
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_USER, to_email, msg.as_string())
+            print(f"[SUCCESS] OTP Email delivered to {to_email} via Gmail SSL!")
+    except Exception as err2:
+        print(f"[ERROR] Failed to send email to {to_email}: {err2}")
+
+# ==========================================
+# ROUTES
+# ==========================================
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "OK", "message": "Idea360 Production Auth API Server (FastAPI) is running!"}
+
+@app.post("/api/auth/register")
+def register(req: schemas.RegisterRequest):
+    if not req.username or not req.email or not req.password:
+        raise HTTPException(status_code=400, detail="Name, email, and password are required.")
+
+    clean_email = req.email.strip().lower()
+    existing = database.find_user_by_email(clean_email)
+    
+    if existing:
+        if existing.get("is_verified"):
+            raise HTTPException(status_code=400, detail="Email address is already registered & verified! Please sign in.")
+        else:
+            # Update password for existing unverified user
+            hashed_pwd = hash_password(req.password)
+            database.update_user_profile_in_db(
+                email=clean_email,
+                username=req.username,
+                employee_id=req.employeeId or "",
+                hashed_password=hashed_pwd
+            )
+    else:
+        hashed_pwd = hash_password(req.password)
+        database.create_user(
+            username=req.username,
+            email=clean_email,
+            hashed_password=hashed_pwd,
+            role=req.role or "User",
+            employee_id=req.employeeId or ""
+        )
+
+    otp_code = str(random.randint(100000, 999999))
+    database.save_otp_to_db(clean_email, otp_code)
+    
+    # Dispatch email in parallel background thread for instant (<10ms) HTTP response
+    threading.Thread(target=send_otp_email_smtp, args=(clean_email, otp_code), daemon=True).start()
+
+    return {
+        "message": f"Verification OTP sent to {clean_email}! Please check your email inbox.",
+        "requiresOtp": True,
+        "email": clean_email
+    }
+
+@app.post("/api/auth/verify-otp")
+def verify_otp(req: schemas.VerifyOtpRequest):
+    if not req.email or not req.otpCode:
+        raise HTTPException(status_code=400, detail="Email and OTP code are required.")
+
+    clean_email = req.email.strip().lower()
+    is_valid = database.verify_otp_in_db(clean_email, req.otpCode)
+    
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP code! Please check your email and try again.")
+
+    database.mark_user_as_verified(clean_email)
+    user = database.find_user_by_email(clean_email)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found.")
+
+    token = generate_jwt_token(
+        user_id=user["id"],
+        email=user["email"],
+        role=user["role"],
+        username=user["username"]
+    )
+
+    return {
+        "message": "Email verified successfully! Session active.",
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+            "employeeId": user.get("employee_id") or ""
+        }
+    }
+
+@app.post("/api/auth/resend-otp")
+def resend_otp(req: schemas.ResendOtpRequest):
+    if not req.email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    clean_email = req.email.strip().lower()
+    otp_code = str(random.randint(100000, 999999))
+    database.save_otp_to_db(clean_email, otp_code)
+
+    # Dispatch email in parallel background thread for instant (<10ms) HTTP response
+    threading.Thread(target=send_otp_email_smtp, args=(clean_email, otp_code), daemon=True).start()
+    print(f"[RESEND OTP] Sent to {clean_email}")
+
+    return {
+        "message": f"New 6-digit OTP code sent to {clean_email}! Please check your email inbox."
+    }
+
+@app.post("/api/auth/login")
+def login(req: schemas.LoginRequest):
+    if not req.email or not req.password:
+        raise HTTPException(status_code=400, detail="Email and password are required.")
+
+    clean_email = req.email.strip().lower()
+    user = database.find_user_by_email(clean_email)
+    
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Account not found for '{clean_email}'. You must register an account first before signing in!"
+        )
+
+    # 1. Verify Password Match
+    is_match = verify_password(req.password, user["password"])
+    if not is_match:
+        raise HTTPException(
+            status_code=401, 
+            detail="Incorrect password! Please check your password and try again."
+        )
+
+    # 2. Verify Email OTP Verification Status
+    if not user.get("is_verified"):
+        raise HTTPException(
+            status_code=403, 
+            detail="Account registration is incomplete! Please complete 6-digit email OTP verification first."
+        )
+
+    # 3. Verify Account Registered Role Match
+    registered_role = user.get("role") or "User"
+    if req.role and registered_role != req.role:
+        raise HTTPException(
+            status_code=403,
+            detail=f"This account is registered as '{registered_role}'. You cannot sign in under '{req.role}' role!"
+        )
+
+    token = generate_jwt_token(
+        user_id=user["id"],
+        email=user["email"],
+        role=registered_role,
+        username=user["username"]
+    )
+
+    return {
+        "message": "Login successful!",
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "role": registered_role,
+            "employeeId": user.get("employee_id") or req.employeeId or ""
+        }
+    }
+
+@app.put("/api/auth/profile")
+def update_profile(req: schemas.ProfileUpdateRequest):
+    if not req.email or not req.username:
+        raise HTTPException(status_code=400, detail="Email and full name are required.")
+
+    clean_email = req.email.strip().lower()
+    user = database.find_user_by_email(clean_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found.")
+
+    hashed_pwd = None
+    if req.newPassword:
+        if not req.currentPassword:
+            raise HTTPException(status_code=400, detail="Current password is required to set a new password.")
+        
+        is_match = verify_password(req.currentPassword, user["password"])
+        if not is_match:
+            raise HTTPException(status_code=400, detail="Incorrect current password! Profile update aborted.")
+            
+        hashed_pwd = hash_password(req.newPassword)
+
+    updated_user = database.update_user_profile_in_db(
+        email=clean_email,
+        username=req.username,
+        employee_id=req.employeeId,
+        hashed_password=hashed_pwd
+    )
+
+    token = generate_jwt_token(
+        user_id=user["id"],
+        email=user["email"],
+        role=user["role"],
+        username=req.username.strip()
+    )
+
+    return {
+        "message": "Profile updated successfully in database!",
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "username": req.username.strip(),
+            "email": user["email"],
+            "role": user["role"],
+            "employeeId": req.employeeId or user.get("employee_id") or ""
+        }
+    }
+
+@app.get("/api/ideas")
+def get_ideas():
+    try:
+        ideas = database.get_all_ideas_from_db()
+        return ideas
+    except Exception as err:
+        print("Get Ideas Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch ideas from database.")
+
+@app.post("/api/ideas", status_code=status.HTTP_201_CREATED)
+def create_idea(req: schemas.IdeaCreateRequest):
+    if not req.title or not req.category or not req.problemStatement or not req.description:
+        raise HTTPException(status_code=400, detail="Title, category, problem statement, and description are required.")
+
+    try:
+        saved_idea = database.save_idea_to_db(req.model_dump())
+        return {"message": "Idea saved successfully!", "idea": saved_idea}
+    except Exception as err:
+        print("Save Idea Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to save idea to database.")
+
+@app.patch("/api/ideas/{idea_id}/status")
+def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest):
+    try:
+        updated = database.update_idea_status_in_db(idea_id, req.status, req.evaluatorNotes)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Idea not found.")
+        return {"message": f'Idea status updated to "{req.status}"!', "idea": updated}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Update Status Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to update status.")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
