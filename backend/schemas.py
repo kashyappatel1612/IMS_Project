@@ -45,3 +45,19 @@ class IdeaCreateRequest(BaseModel):
 class IdeaStatusUpdateRequest(BaseModel):
     status: str
     evaluatorNotes: Optional[str] = ""
+
+class AnalysisReportCreateRequest(BaseModel):
+    ideaId: Optional[int] = None
+    ideaTitle: str
+    baName: str
+    baEmail: Optional[str] = ""
+    reportTitle: str
+    summary: str
+    estimatedCost: Optional[str] = ""
+    projectedRoi: Optional[str] = ""
+    attachment: Optional[Any] = None
+
+class AnalysisReportStatusUpdateRequest(BaseModel):
+    status: str
+    pmNotes: Optional[str] = ""
+

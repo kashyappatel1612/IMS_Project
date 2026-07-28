@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -25,10 +25,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+# Configure CORS (Supports localhost, 127.0.0.1 and custom domains with credentials)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,6 +38,18 @@ JWT_SECRET = os.getenv("JWT_SECRET", "idea360_super_secret_key_2026")
 SMTP_USER = (os.getenv("SMTP_USER") or "").strip()
 SMTP_PASS = (os.getenv("SMTP_PASS") or "").replace(" ", "")
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+
+def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    """Verifies JWT Bearer token from request Authorization header if present."""
+    if not authorization:
+        return {"id": 0, "username": "Guest", "role": "User", "email": ""}
+    try:
+        token = authorization.replace("Bearer ", "").strip()
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload
+    except Exception as err:
+        print("[JWT VERIFY WARNING]", err)
+        return {"id": 0, "username": "Guest", "role": "User", "email": ""}
 
 def hash_password(password: str) -> str:
     pwd_bytes = password.encode('utf-8')[:72]
@@ -65,10 +77,12 @@ def generate_jwt_token(user_id: int, email: str, role: str, username: str) -> st
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 def send_otp_email_smtp(to_email: str, otp_code: str):
-    print(f"[OTP GENERATED] Sending to {to_email}...")
+    print(f"\n==================================================")
+    print(f"[OTP GENERATED & READY] EMAIL: {to_email} | CODE: {otp_code}")
+    print(f"==================================================\n")
     
     if not (SMTP_USER and SMTP_PASS):
-        print(f"[EMAIL ERROR] SMTP_USER or SMTP_PASS missing in backend/.env")
+        print(f"[EMAIL NOTICE] SMTP_USER or SMTP_PASS missing in backend/.env. Using console OTP code: {otp_code}")
         return
 
     msg = MIMEMultipart("alternative")
@@ -272,7 +286,7 @@ def login(req: schemas.LoginRequest):
     }
 
 @app.put("/api/auth/profile")
-def update_profile(req: schemas.ProfileUpdateRequest):
+def update_profile(req: schemas.ProfileUpdateRequest, current_user: dict = Depends(get_current_user)):
     if not req.email or not req.username:
         raise HTTPException(status_code=400, detail="Email and full name are required.")
 
@@ -319,7 +333,7 @@ def update_profile(req: schemas.ProfileUpdateRequest):
     }
 
 @app.get("/api/ideas")
-def get_ideas():
+def get_ideas(current_user: dict = Depends(get_current_user)):
     try:
         ideas = database.get_all_ideas_from_db()
         return ideas
@@ -328,7 +342,7 @@ def get_ideas():
         raise HTTPException(status_code=500, detail="Failed to fetch ideas from database.")
 
 @app.post("/api/ideas", status_code=status.HTTP_201_CREATED)
-def create_idea(req: schemas.IdeaCreateRequest):
+def create_idea(req: schemas.IdeaCreateRequest, current_user: dict = Depends(get_current_user)):
     if not req.title or not req.category or not req.problemStatement or not req.description:
         raise HTTPException(status_code=400, detail="Title, category, problem statement, and description are required.")
 
@@ -340,7 +354,7 @@ def create_idea(req: schemas.IdeaCreateRequest):
         raise HTTPException(status_code=500, detail="Failed to save idea to database.")
 
 @app.patch("/api/ideas/{idea_id}/status")
-def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest):
+def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest, current_user: dict = Depends(get_current_user)):
     try:
         updated = database.update_idea_status_in_db(idea_id, req.status, req.evaluatorNotes)
         if not updated:
@@ -352,6 +366,41 @@ def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest):
         print("Update Status Error:", err)
         raise HTTPException(status_code=500, detail="Failed to update status.")
 
+@app.get("/api/analysis-reports")
+def get_analysis_reports(current_user: dict = Depends(get_current_user)):
+    try:
+        reports = database.get_all_analysis_reports_from_db()
+        return reports
+    except Exception as err:
+        print("Get Analysis Reports Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch analysis reports from database.")
+
+@app.post("/api/analysis-reports", status_code=status.HTTP_201_CREATED)
+def create_analysis_report(req: schemas.AnalysisReportCreateRequest, current_user: dict = Depends(get_current_user)):
+    if not req.ideaTitle or not req.baName or not req.reportTitle or not req.summary:
+        raise HTTPException(status_code=400, detail="Idea title, BA name, report title, and summary are required.")
+
+    try:
+        saved_report = database.save_analysis_report_to_db(req.model_dump())
+        return {"message": "Analysis Report submitted to Project Manager successfully!", "report": saved_report}
+    except Exception as err:
+        print("Save Analysis Report Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to save analysis report to database.")
+
+@app.patch("/api/analysis-reports/{report_id}/status")
+def update_analysis_report_status(report_id: int, req: schemas.AnalysisReportStatusUpdateRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        updated = database.update_analysis_report_status_in_db(report_id, req.status, req.pmNotes)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Analysis report not found.")
+        return {"message": f'Analysis report status updated to "{req.status}"!', "report": updated}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Update Report Status Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to update report status.")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+

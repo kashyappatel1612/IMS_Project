@@ -37,32 +37,90 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          {/* Stage 1: Dashboard (User / Admin) & Submit Idea Page */}
+          {/* Universal Stage 1 Routes (Accessible to All Authenticated Users) */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/submit-idea" element={<SubmitIdea />} />
-          {/* Stage 2: Initial Screening & Evaluation Page */}
-          <Route path="/initial-screening" element={<InitialScreening />} />
-          <Route path="/screening-evaluation/:id" element={<ScreeningEvaluation />} />
-          {/* Stage 3: Feasibility Review (Technical, Functional, Business) */}
-          <Route path="/feasibility-review" element={<FeasibilityReview />} />
-          {/* Stage 4: Business Analysis */}
-          <Route path="/business-analysis" element={<BusinessAnalysis />} />
-          {/* Stage 6: Estimation & Budgeting */}
-          <Route path="/estimation" element={<Estimation />} />
-          {/* Stage 7: Projects Portfolio */}
-          <Route path="/projects" element={<ProjectList />} />
-          {/* Stage 8: Execution & Milestones */}
-          <Route path="/execution" element={<Execution />} />
-          {/* Stage 9: Progress Tracking */}
-          <Route path="/progress-tracking" element={<ProgressTracking />} />
-          {/* Stage 10: Benefits Tracking & ROI */}
-          <Route path="/benefits-tracking" element={<BenefitsTracking />} />
-          {/* Stage 11: Knowledge Base */}
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
-          {/* Stage 12: Reports & Analytics */}
           <Route path="/reports" element={<Dashboard />} />
-          {/* Stage 13: Settings */}
           <Route path="/settings" element={<Settings />} />
+
+          {/* Stage 2: Initial Screening & Evaluation Page (Admin & Reviewer) */}
+          <Route
+            path="/initial-screening"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Reviewer"]}>
+                <InitialScreening />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/screening-evaluation/:id"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Reviewer"]}>
+                <ScreeningEvaluation />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Stage 3 & 4: Feasibility Review & Business Analysis (Admin, Reviewer, Business Analyst) */}
+          <Route
+            path="/feasibility-review"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Reviewer", "Business Analyst"]}>
+                <FeasibilityReview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/business-analysis"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Reviewer", "Business Analyst"]}>
+                <BusinessAnalysis />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Stage 6 to 10: Estimation, Projects, Execution, Tracking (Admin, Project Manager, Business Analyst) */}
+          <Route
+            path="/estimation"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Project Manager", "Business Analyst"]}>
+                <Estimation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Project Manager", "Business Analyst"]}>
+                <ProjectList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/execution"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Project Manager"]}>
+                <Execution />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/progress-tracking"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Project Manager", "Business Analyst"]}>
+                <ProgressTracking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/benefits-tracking"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Project Manager", "Business Analyst"]}>
+                <BenefitsTracking />
+              </ProtectedRoute>
+            }
+          />
         </Route>
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />

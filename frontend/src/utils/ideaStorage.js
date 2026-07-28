@@ -1,10 +1,8 @@
 /**
- * Shared Data Store Syncing with Express + PostgreSQL Backend
+ * Shared Data Store Syncing with FastAPI + PostgreSQL Backend
  * Includes localStorage fallback.
  */
-import axios from "axios";
-
-const API_BASE_URL = "http://localhost:5000/api";
+import { apiClient } from "../services/api";
 
 export function getSubmittedIdeas() {
   try {
@@ -27,7 +25,7 @@ export function getSubmittedIdeas() {
 
 export async function fetchIdeasFromApi() {
   try {
-    const res = await axios.get(`${API_BASE_URL}/ideas`);
+    const res = await apiClient.get("/ideas");
     if (res.data && Array.isArray(res.data)) {
       localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(res.data));
       return res.data;
@@ -59,7 +57,7 @@ export async function saveNewIdea(newIdea) {
   };
 
   try {
-    const res = await axios.post(`${API_BASE_URL}/ideas`, payload);
+    const res = await apiClient.post("/ideas", payload);
     if (res.data && res.data.idea) {
       const savedIdea = res.data.idea;
       const updatedList = [savedIdea, ...currentList.filter((item) => String(item.id) !== String(savedIdea.id))];
@@ -67,7 +65,7 @@ export async function saveNewIdea(newIdea) {
       return updatedList;
     }
   } catch (err) {
-    console.error("PostgreSQL Save Error:", err);
+    console.error("Database Save Error:", err);
   }
 
   // Fallback to local storage if API backend is offline
@@ -95,10 +93,98 @@ export function updateIdeaStatus(id, newStatus, evaluatorNotes = "") {
   );
   localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(updatedList));
 
-  // Sync Status Update to PostgreSQL Backend Async
-  axios.patch(`${API_BASE_URL}/ideas/${id}/status`, { status: newStatus, evaluatorNotes }).catch((err) => {
-    console.warn("PostgreSQL status sync notice:", err.message);
+  // Sync Status Update to FastAPI Backend Async
+  apiClient.patch(`/ideas/${id}/status`, { status: newStatus, evaluatorNotes }).catch((err) => {
+    console.warn("Backend status sync notice:", err.message);
   });
 
   return updatedList;
 }
+
+// ==========================================
+// ANALYSIS REPORT STORAGE HELPERS
+// ==========================================
+
+export function getSubmittedAnalysisReports() {
+  try {
+    const existing = localStorage.getItem("idea360AnalysisReports");
+    if (!existing) {
+      localStorage.setItem("idea360AnalysisReports", JSON.stringify([]));
+      return [];
+    }
+    return JSON.parse(existing);
+  } catch (err) {
+    console.error("Error reading submitted analysis reports", err);
+    return [];
+  }
+}
+
+export async function saveAnalysisReport(reportData) {
+  const currentList = getSubmittedAnalysisReports();
+  const tempId = Date.now();
+  const baName = reportData.baName || "Business Analyst";
+  const statusStr = `Approved by BA: ${baName}`;
+
+  const payload = {
+    id: tempId,
+    ideaId: reportData.ideaId || null,
+    ideaTitle: reportData.ideaTitle || "Untitled Proposal",
+    baName: baName,
+    baEmail: reportData.baEmail || "",
+    reportTitle: reportData.reportTitle || "BA Feasibility & ROI Analysis",
+    summary: reportData.summary || "",
+    estimatedCost: reportData.estimatedCost || "",
+    projectedRoi: reportData.projectedRoi || "",
+    attachment: reportData.attachment || null,
+    status: statusStr,
+    pmNotes: "",
+    date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  };
+
+  // If linked to an idea, update idea's status in local ideas list
+  if (reportData.ideaId) {
+    updateIdeaStatus(reportData.ideaId, statusStr, `Analysis report prepared and forwarded to Project Manager by BA: ${baName}`);
+  }
+
+  try {
+    const res = await apiClient.post("/analysis-reports", payload);
+    if (res.data && res.data.report) {
+      const savedReport = res.data.report;
+      const updatedList = [savedReport, ...currentList.filter((item) => String(item.id) !== String(savedReport.id))];
+      localStorage.setItem("idea360AnalysisReports", JSON.stringify(updatedList));
+      return updatedList;
+    }
+  } catch (err) {
+    console.error("Database Analysis Report Save Error:", err);
+  }
+
+  const updatedList = [payload, ...currentList];
+  localStorage.setItem("idea360AnalysisReports", JSON.stringify(updatedList));
+  return updatedList;
+}
+
+export function updateAnalysisReportStatus(id, newStatus, pmNotes = "") {
+  const currentList = getSubmittedAnalysisReports();
+  let targetIdeaId = null;
+
+  const updatedList = currentList.map((report) => {
+    if (String(report.id) === String(id)) {
+      targetIdeaId = report.ideaId;
+      return { ...report, status: newStatus, pmNotes: pmNotes || report.pmNotes };
+    }
+    return report;
+  });
+
+  localStorage.setItem("idea360AnalysisReports", JSON.stringify(updatedList));
+
+  if (targetIdeaId) {
+    updateIdeaStatus(targetIdeaId, newStatus, `PM Action: ${pmNotes || newStatus}`);
+  }
+
+  apiClient.patch(`/analysis-reports/${id}/status`, { status: newStatus, pmNotes }).catch((err) => {
+    console.warn("Backend report status sync notice:", err.message);
+  });
+
+  return updatedList;
+}
+

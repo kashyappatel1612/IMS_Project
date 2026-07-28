@@ -97,10 +97,27 @@ def init_tables():
         except Exception:
             pass
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS analysis_reports (
+                id SERIAL PRIMARY KEY,
+                idea_id BIGINT,
+                idea_title VARCHAR(500) NOT NULL,
+                ba_name VARCHAR(255) NOT NULL,
+                ba_email VARCHAR(255),
+                report_title VARCHAR(500) NOT NULL,
+                summary TEXT,
+                estimated_cost VARCHAR(100),
+                projected_roi VARCHAR(100),
+                attachment JSONB,
+                status VARCHAR(100) NOT NULL DEFAULT 'Approved by BA',
+                pm_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
         conn.commit()
         cursor.close()
         conn.close()
-        print("[OK] PostgreSQL Tables (users, otps, ideas) Verified!")
+        print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports) Verified!")
     else:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -169,9 +186,27 @@ def init_tables():
             cursor.execute("ALTER TABLE ideas ADD COLUMN expected_benefits TEXT")
         except Exception:
             pass
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS analysis_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                idea_id INTEGER,
+                idea_title TEXT NOT NULL,
+                ba_name TEXT NOT NULL,
+                ba_email TEXT,
+                report_title TEXT NOT NULL,
+                summary TEXT,
+                estimated_cost TEXT,
+                projected_roi TEXT,
+                attachment TEXT,
+                status TEXT NOT NULL DEFAULT 'Approved by BA',
+                pm_notes TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
         conn.close()
-        print("[OK] SQLite Tables (users, otps, ideas) Verified!")
+        print("[OK] SQLite Tables (users, otps, ideas, analysis_reports) Verified!")
 
 # Initialize on module load
 init_tables()
@@ -573,3 +608,200 @@ def update_idea_status_in_db(idea_id: int, status: str, evaluator_notes: str = "
         "evaluatorNotes": r.get("evaluator_notes") or "",
         "date": datetime.now().strftime("%b %d, %Y")
     }
+
+# ==========================================
+# ANALYSIS REPORT DATABASE HELPERS
+# ==========================================
+
+def get_all_analysis_reports_from_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    rows = []
+    if IS_POSTGRES:
+        cursor.execute("SELECT * FROM analysis_reports ORDER BY created_at DESC;")
+        fetched = cursor.fetchall()
+        rows = [_row_to_dict(r, cursor.description) for r in fetched]
+        cursor.close()
+        conn.close()
+    else:
+        cursor.execute("SELECT * FROM analysis_reports ORDER BY created_at DESC;")
+        fetched = cursor.fetchall()
+        rows = [dict(r) for r in fetched]
+        conn.close()
+        
+    reports_list = []
+    for r in rows:
+        attachment_data = None
+        if r.get("attachment"):
+            if isinstance(r["attachment"], (dict, list)):
+                attachment_data = r["attachment"]
+            else:
+                try:
+                    attachment_data = json.loads(r["attachment"])
+                except Exception:
+                    attachment_data = r["attachment"]
+                    
+        formatted_date = ""
+        if r.get("created_at"):
+            try:
+                dt_str = str(r["created_at"]).split(".")[0]
+                dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+                formatted_date = dt.strftime("%b %d, %Y")
+            except Exception:
+                formatted_date = str(r["created_at"])
+                
+        reports_list.append({
+            "id": int(r["id"]),
+            "ideaId": r.get("idea_id"),
+            "ideaTitle": r["idea_title"],
+            "baName": r["ba_name"],
+            "baEmail": r.get("ba_email") or "",
+            "reportTitle": r["report_title"],
+            "summary": r.get("summary") or "",
+            "estimatedCost": r.get("estimated_cost") or "",
+            "projectedRoi": r.get("projected_roi") or "",
+            "attachment": attachment_data,
+            "status": r["status"],
+            "pmNotes": r.get("pm_notes") or "",
+            "date": formatted_date or datetime.now().strftime("%b %d, %Y")
+        })
+        
+    return reports_list
+
+def save_analysis_report_to_db(report_data: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    idea_id = report_data.get("ideaId")
+    idea_title = report_data.get("ideaTitle", "Untitled Idea").strip()
+    ba_name = report_data.get("baName", "Business Analyst").strip()
+    ba_email = report_data.get("baEmail", "").strip()
+    report_title = report_data.get("reportTitle", "Analysis Report").strip()
+    summary = report_data.get("summary", "").strip()
+    estimated_cost = report_data.get("estimatedCost", "").strip()
+    projected_roi = report_data.get("projectedRoi", "").strip()
+    attachment_val = report_data.get("attachment")
+    status_str = f"Approved by BA: {ba_name}"
+
+    if IS_POSTGRES:
+        attachment_param = json.dumps(attachment_val) if attachment_val is not None else None
+        cursor.execute(
+            """INSERT INTO analysis_reports 
+               (idea_id, idea_title, ba_name, ba_email, report_title, summary, estimated_cost, projected_roi, attachment, status)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+            (idea_id, idea_title, ba_name, ba_email, report_title, summary, estimated_cost, projected_roi, attachment_param, status_str)
+        )
+        row = cursor.fetchone()
+        if idea_id:
+            cursor.execute("UPDATE ideas SET status = %s WHERE id = %s", (status_str, idea_id))
+        conn.commit()
+        r = _row_to_dict(row, cursor.description)
+        cursor.close()
+        conn.close()
+    else:
+        attachment_str = json.dumps(attachment_val) if attachment_val is not None else None
+        cursor.execute(
+            """INSERT INTO analysis_reports 
+               (idea_id, idea_title, ba_name, ba_email, report_title, summary, estimated_cost, projected_roi, attachment, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (idea_id, idea_title, ba_name, ba_email, report_title, summary, estimated_cost, projected_roi, attachment_str, status_str)
+        )
+        report_id = cursor.lastrowid
+        if idea_id:
+            cursor.execute("UPDATE ideas SET status = ? WHERE id = ?", (status_str, idea_id))
+        conn.commit()
+        cursor.execute("SELECT * FROM analysis_reports WHERE id = ?", (report_id,))
+        row = cursor.fetchone()
+        r = dict(row)
+        conn.close()
+
+    attachment_res = None
+    if r.get("attachment"):
+        if isinstance(r["attachment"], (dict, list)):
+            attachment_res = r["attachment"]
+        else:
+            try:
+                attachment_res = json.loads(r["attachment"])
+            except Exception:
+                attachment_res = r["attachment"]
+
+    return {
+        "id": int(r["id"]),
+        "ideaId": r.get("idea_id"),
+        "ideaTitle": r["idea_title"],
+        "baName": r["ba_name"],
+        "baEmail": r.get("ba_email") or "",
+        "reportTitle": r["report_title"],
+        "summary": r.get("summary") or "",
+        "estimatedCost": r.get("estimated_cost") or "",
+        "projectedRoi": r.get("projected_roi") or "",
+        "attachment": attachment_res,
+        "status": r["status"],
+        "pmNotes": r.get("pm_notes") or "",
+        "date": datetime.now().strftime("%b %d, %Y")
+    }
+
+def update_analysis_report_status_in_db(report_id: int, status: str, pm_notes: str = ""):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if IS_POSTGRES:
+        cursor.execute(
+            "UPDATE analysis_reports SET status = %s, pm_notes = %s WHERE id = %s RETURNING *",
+            (status, pm_notes or "", report_id)
+        )
+        row = cursor.fetchone()
+        if row and row.get("idea_id"):
+            cursor.execute("UPDATE ideas SET status = %s WHERE id = %s", (status, row["idea_id"]))
+        conn.commit()
+        if not row:
+            cursor.close()
+            conn.close()
+            return None
+        r = _row_to_dict(row, cursor.description)
+        cursor.close()
+        conn.close()
+    else:
+        cursor.execute(
+            "UPDATE analysis_reports SET status = ?, pm_notes = ? WHERE id = ?",
+            (status, pm_notes or "", report_id)
+        )
+        conn.commit()
+        cursor.execute("SELECT * FROM analysis_reports WHERE id = ?", (report_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return None
+        r = dict(row)
+        if r.get("idea_id"):
+            cursor.execute("UPDATE ideas SET status = ? WHERE id = ?", (status, r["idea_id"]))
+            conn.commit()
+        conn.close()
+        
+    attachment_res = None
+    if r.get("attachment"):
+        if isinstance(r["attachment"], (dict, list)):
+            attachment_res = r["attachment"]
+        else:
+            try:
+                attachment_res = json.loads(r["attachment"])
+            except Exception:
+                attachment_res = r["attachment"]
+                
+    return {
+        "id": int(r["id"]),
+        "ideaId": r.get("idea_id"),
+        "ideaTitle": r["idea_title"],
+        "baName": r["ba_name"],
+        "baEmail": r.get("ba_email") or "",
+        "reportTitle": r["report_title"],
+        "summary": r.get("summary") or "",
+        "estimatedCost": r.get("estimated_cost") or "",
+        "projectedRoi": r.get("projected_roi") or "",
+        "attachment": attachment_res,
+        "status": r["status"],
+        "pmNotes": r.get("pm_notes") or "",
+        "date": datetime.now().strftime("%b %d, %Y")
+    }
+

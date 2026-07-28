@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +8,18 @@ export const apiClient = axios.create({
     "Content-Type": "application/json"
   }
 });
+
+// Interceptor to inject JWT Bearer Token into headers automatically
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Auth API Calls
 export async function loginUser(credentials) {
@@ -117,3 +129,36 @@ export async function patchIdeaStatus(id, status, evaluatorNotes = "") {
     return null;
   }
 }
+
+// Analysis Reports API Calls
+export async function fetchAnalysisReports() {
+  try {
+    const res = await apiClient.get("/analysis-reports");
+    return res.data;
+  } catch (err) {
+    console.warn("Backend API notice for analysis reports, reading from local cache:", err.message);
+    const cached = localStorage.getItem("idea360AnalysisReports");
+    return cached ? JSON.parse(cached) : [];
+  }
+}
+
+export async function postAnalysisReport(reportData) {
+  try {
+    const res = await apiClient.post("/analysis-reports", reportData);
+    return res.data;
+  } catch (err) {
+    console.warn("Backend API notice for post analysis report, fallback to local cache:", err.message);
+    return null;
+  }
+}
+
+export async function patchAnalysisReportStatus(id, status, pmNotes = "") {
+  try {
+    const res = await apiClient.patch(`/analysis-reports/${id}/status`, { status, pmNotes });
+    return res.data;
+  } catch (err) {
+    console.warn("Backend API notice for report status patch, fallback to local cache:", err.message);
+    return null;
+  }
+}
+

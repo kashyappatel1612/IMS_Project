@@ -31,21 +31,55 @@ function ForgotPassword() {
     setLoading(true);
 
     setTimeout(() => {
-      const savedUserStr = localStorage.getItem("idea360User");
-      
-      if (savedUserStr) {
-        try {
-          const savedUser = JSON.parse(savedUserStr);
-          if (savedUser.email.toLowerCase() !== email.trim().toLowerCase()) {
-            setError("No account found with this email address.");
-            setLoading(false);
-            return;
+      const cleanEmail = email.trim().toLowerCase();
+      let foundAccount = false;
+
+      // 1. Check idea360Users list
+      try {
+        const usersListStr = localStorage.getItem("idea360Users");
+        if (usersListStr) {
+          const usersList = JSON.parse(usersListStr);
+          if (usersList.some((u) => u.email?.toLowerCase() === cleanEmail)) {
+            foundAccount = true;
           }
-        } catch (err) {
-          console.error(err);
         }
-      } else {
-        setError("No registered accounts found. Please create an account first.");
+      } catch (err) {
+        console.error(err);
+      }
+
+      // 2. Check idea360User single object
+      try {
+        const singleUserStr = localStorage.getItem("idea360User");
+        if (singleUserStr) {
+          const singleUser = JSON.parse(singleUserStr);
+          if (singleUser.email?.toLowerCase() === cleanEmail) {
+            foundAccount = true;
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      // 3. Check login history & standard enterprise domain emails (@imsgroup.com or valid email structure)
+      try {
+        const historyStr = localStorage.getItem("idea360LoginHistory");
+        if (historyStr) {
+          const historyList = JSON.parse(historyStr);
+          if (historyList.some((h) => h.email?.toLowerCase() === cleanEmail)) {
+            foundAccount = true;
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      // Allow any valid email format for demo reset
+      if (cleanEmail.includes("@")) {
+        foundAccount = true;
+      }
+
+      if (!foundAccount) {
+        setError("No account found with this email address. Please check your email or register.");
         setLoading(false);
         return;
       }
