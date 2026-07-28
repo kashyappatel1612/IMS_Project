@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and DB files
+.env
+*.db
+backend/venv/
+backend/__pycache__/
+backend/idea360.db
+
+# Node modules & build outputs
+node_modules/
+dist/
+.DS_Store

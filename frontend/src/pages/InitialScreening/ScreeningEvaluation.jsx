@@ -20,13 +20,18 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import { getIdeaById, updateIdeaStatus } from "../../utils/ideaStorage";
+import { getIdeaById, updateIdeaStatus, checkIdeaDuplicity } from "../../utils/ideaStorage";
 
 function ScreeningEvaluation() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [idea, setIdea] = useState(null);
+
+  // AI Check State
+  const [isCheckingDuplicity, setIsCheckingDuplicity] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+
 
   // 5 Screening Checklist Criteria States
   const [duplicateCheck, setDuplicateCheck] = useState("No Duplicate");
@@ -48,7 +53,34 @@ function ScreeningEvaluation() {
     }
   }, [id]);
 
+  const handleAdminDuplicityCheck = async () => {
+
+    if (!idea) return;
+    setIsCheckingDuplicity(true);
+    try {
+      const res = await checkIdeaDuplicity({
+        title: idea.title,
+        category: idea.category,
+        problemStatement: idea.problemStatement,
+        description: idea.description,
+        proposedSolution: idea.proposedSolution,
+        ideaId: idea.id
+      });
+      setAiResult(res);
+      if (res && res.max_similarity_score >= 65.0) {
+        setDuplicateCheck("Duplicate Exists");
+      } else {
+        setDuplicateCheck("No Duplicate");
+      }
+    } catch (err) {
+      console.error("AI check error:", err);
+    } finally {
+      setIsCheckingDuplicity(false);
+    }
+  };
+
   if (!idea) {
+
     return (
       <div className="dashboard-wrapper">
         <div style={{ padding: "40px", textAlign: "center" }}>
@@ -223,9 +255,21 @@ function ScreeningEvaluation() {
         <div className="screening-right-col">
           <Card title="5-Point Validation Checklist" subtitle="Perform criteria screening evaluation">
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
-              {/* Criteria 1 */}
-              <div className="checklist-card-item">
-                <label className="input-label">1. Duplicate Idea Check</label>
+              {/* Criteria 1: Duplicate Idea Check with On-Demand AI Button */}
+              <div className="checklist-card-item" style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <label className="input-label" style={{ fontWeight: "700", margin: 0 }}>1. Duplicate Idea Check</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    loading={isCheckingDuplicity}
+                    onClick={handleAdminDuplicityCheck}
+                  >
+                    🤖 Check Duplicacy (AI Match)
+                  </Button>
+                </div>
+
                 <select
                   className="custom-input-elem"
                   value={duplicateCheck}
@@ -234,7 +278,43 @@ function ScreeningEvaluation() {
                   <option value="No Duplicate"> No Duplicate (Unique Idea)</option>
                   <option value="Duplicate Exists"> Duplicate of Existing Idea/Project</option>
                 </select>
+
+                {/* AI Duplicity Result Card after Admin Click */}
+                {aiResult && (
+                  <div style={{
+                    marginTop: "12px",
+                    background: aiResult.max_similarity_score >= 85 ? "#fef2f2" : aiResult.max_similarity_score >= 65 ? "#fffbeb" : "#f0fdf4",
+                    border: `1px solid ${aiResult.max_similarity_score >= 85 ? "#fecaca" : aiResult.max_similarity_score >= 65 ? "#fde68a" : "#bbf7d0"}`,
+                    borderRadius: "8px",
+                    padding: "12px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#1f2937" }}>
+                        AI Match Score:
+                      </span>
+                      <span style={{
+                        background: aiResult.max_similarity_score >= 85 ? "#ef4444" : aiResult.max_similarity_score >= 65 ? "#f59e0b" : "#22c55e",
+                        color: "#ffffff",
+                        padding: "2px 10px",
+                        borderRadius: "12px",
+                        fontSize: "12px",
+                        fontWeight: "800"
+                      }}>
+                        {aiResult.max_similarity_score.toFixed(1)}% Similarity
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "12px", color: "#4b5563", margin: "6px 0 0 0" }}>
+                      <strong>Conclusion:</strong> {aiResult.duplicity_status}
+                    </p>
+                    {aiResult.matched_idea && (
+                      <div style={{ fontSize: "12px", color: "#374151", marginTop: "6px", background: "rgba(255,255,255,0.8)", padding: "8px", borderRadius: "6px" }}>
+                        <strong>Top Matched Idea:</strong> "{aiResult.matched_idea.title}" ({aiResult.matched_idea.similarity_score}% similarity by {aiResult.matched_idea.author})
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
 
               {/* Criteria 2 */}
               <div className="checklist-card-item">

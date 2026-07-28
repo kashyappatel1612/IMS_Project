@@ -6,3 +6,7 @@ passlib[bcrypt]>=1.7.4
 bcrypt>=4.0.0
 python-dotenv>=1.0.0
 aiosqlite>=0.20.0
+sentence-transformers>=2.2.0
+torch
+numpy
+

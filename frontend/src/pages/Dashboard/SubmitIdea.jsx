@@ -14,7 +14,7 @@ import {
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
-import { saveNewIdea } from "../../utils/ideaStorage";
+import { saveNewIdea, checkIdeaDuplicity } from "../../utils/ideaStorage";
 
 function SubmitIdea() {
   const navigate = useNavigate();
@@ -35,9 +35,14 @@ function SubmitIdea() {
   const [proposedSolution, setProposedSolution] = useState("");
   const [expectedBenefits, setExpectedBenefits] = useState("");
 
+  // AI Duplicacy State
+  const [isCheckingDuplicity, setIsCheckingDuplicity] = useState(false);
+  const [duplicityResult, setDuplicityResult] = useState(null);
+
   // File Attachment State
-  const [attachment, setAttachment] = useState(null); // { fileName, fileType, fileSize, fileData }
+  const [attachment, setAttachment] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+
 
   useEffect(() => {
     const savedUserStr = localStorage.getItem("currentUser");
@@ -93,7 +98,33 @@ function SubmitIdea() {
     }
   };
 
+  const handleRunDuplicityCheck = async () => {
+    if (!ideaTitle.trim() && !ideaDescription.trim() && !problemStatement.trim()) {
+      alert("Please enter Title, Problem Statement, or Description before running AI Duplicity Check.");
+      return;
+    }
+
+    setIsCheckingDuplicity(true);
+    setDuplicityResult(null);
+
+    try {
+      const res = await checkIdeaDuplicity({
+        title: ideaTitle,
+        category: ideaCategory,
+        problemStatement: problemStatement,
+        description: ideaDescription,
+        proposedSolution: proposedSolution
+      });
+      setDuplicityResult(res);
+    } catch (err) {
+      console.error("AI Check Error:", err);
+    } finally {
+      setIsCheckingDuplicity(false);
+    }
+  };
+
   const [submitting, setSubmitting] = useState(false);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -358,6 +389,8 @@ function SubmitIdea() {
           </Card>
 
           {/* Form Action Buttons */}
+
+
           <div className="submit-form-actions">
             <Button
               type="button"

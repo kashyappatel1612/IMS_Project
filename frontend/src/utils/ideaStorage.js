@@ -79,7 +79,26 @@ export async function saveNewIdea(newIdea) {
   return updatedList;
 }
 
+export async function checkIdeaDuplicity(ideaData) {
+  try {
+    const res = await apiClient.post("/ideas/check-duplicity", {
+      title: ideaData.title || "",
+      category: ideaData.category || "",
+      problemStatement: ideaData.problemStatement || "",
+      description: ideaData.description || "",
+      proposedSolution: ideaData.proposedSolution || ""
+    });
+    if (res.data && res.data.duplicityResult) {
+      return res.data.duplicityResult;
+    }
+  } catch (err) {
+    console.warn("Backend duplicity check notice:", err.message);
+  }
+  return null;
+}
+
 export function getIdeaById(id) {
+
   const ideas = getSubmittedIdeas();
   return ideas.find((i) => String(i.id) === String(id)) || null;
 }

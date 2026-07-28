@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 
 import schemas
 import database
+import ai_duplicity
 
 # Load environment variables
 load_dotenv()
@@ -341,17 +342,53 @@ def get_ideas(current_user: dict = Depends(get_current_user)):
         print("Get Ideas Error:", err)
         raise HTTPException(status_code=500, detail="Failed to fetch ideas from database.")
 
+@app.post("/api/ideas/check-duplicity")
+def check_idea_duplicity(req: schemas.CheckDuplicityRequest, current_user: dict = Depends(get_current_user)):
+    """Pre-submission API endpoint to check idea similarity score against existing database."""
+    if not req.title and not req.description:
+        raise HTTPException(status_code=400, detail="Title or description is required for duplicacy check.")
+
+    try:
+        existing_ideas = database.get_all_ideas_from_db()
+        idea_dict = req.model_dump()
+        result = ai_duplicity.check_duplicity(idea_dict, existing_ideas)
+        return {
+            "status": "SUCCESS",
+            "duplicityResult": result
+        }
+    except Exception as err:
+        print("[DUPLICITY CHECK ERROR]", err)
+        raise HTTPException(status_code=500, detail="Failed to run duplicacy screening.")
+
 @app.post("/api/ideas", status_code=status.HTTP_201_CREATED)
 def create_idea(req: schemas.IdeaCreateRequest, current_user: dict = Depends(get_current_user)):
     if not req.title or not req.category or not req.problemStatement or not req.description:
         raise HTTPException(status_code=400, detail="Title, category, problem statement, and description are required.")
 
     try:
-        saved_idea = database.save_idea_to_db(req.model_dump())
-        return {"message": "Idea saved successfully!", "idea": saved_idea}
+        idea_dict = req.model_dump()
+        
+        # Pre-generate text embedding for admin evaluation comparisons
+        text = ai_duplicity.combine_idea_text(
+            title=idea_dict.get("title", ""),
+            category=idea_dict.get("category", ""),
+            problem_statement=idea_dict.get("problemStatement", ""),
+            description=idea_dict.get("description", ""),
+            proposedSolution=idea_dict.get("proposedSolution", "")
+        )
+        idea_dict["embeddingVector"] = ai_duplicity.generate_embedding(text)
+        idea_dict["status"] = "Pending Review"
+
+        saved_idea = database.save_idea_to_db(idea_dict)
+        return {
+            "message": "Idea submitted successfully for Initial Screening!",
+            "idea": saved_idea
+        }
     except Exception as err:
         print("Save Idea Error:", err)
         raise HTTPException(status_code=500, detail="Failed to save idea to database.")
+
+
 
 @app.patch("/api/ideas/{idea_id}/status")
 def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest, current_user: dict = Depends(get_current_user)):

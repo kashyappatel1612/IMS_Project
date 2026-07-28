@@ -94,6 +94,10 @@ def init_tables():
             cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS target_user VARCHAR(255);")
             cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS proposed_solution TEXT;")
             cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS expected_benefits TEXT;")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS embedding_vector TEXT;")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS duplicity_score DOUBLE PRECISION DEFAULT 0.0;")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS duplicity_status VARCHAR(100);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS matched_idea_id BIGINT;")
         except Exception:
             pass
 
@@ -184,6 +188,22 @@ def init_tables():
             pass
         try:
             cursor.execute("ALTER TABLE ideas ADD COLUMN expected_benefits TEXT")
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE ideas ADD COLUMN embedding_vector TEXT")
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE ideas ADD COLUMN duplicity_score REAL DEFAULT 0.0")
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE ideas ADD COLUMN duplicity_status TEXT")
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE ideas ADD COLUMN matched_idea_id INTEGER")
         except Exception:
             pass
 
@@ -450,7 +470,11 @@ def get_all_ideas_from_db():
             "attachment": attachment_data,
             "status": r["status"],
             "evaluatorNotes": r.get("evaluator_notes") or "",
-            "date": formatted_date
+            "date": formatted_date,
+            "embeddingVector": r.get("embedding_vector"),
+            "duplicityScore": float(r.get("duplicity_score") or 0.0),
+            "duplicityStatus": r.get("duplicity_status") or "",
+            "matchedIdeaId": r.get("matched_idea_id")
         })
         
     return ideas_list
@@ -467,12 +491,37 @@ def save_idea_to_db(idea_data: dict):
     proposed_solution = idea_data.get("proposedSolution") or ""
     expected_benefits = idea_data.get("expectedBenefits") or idea_data.get("expectedOutcome") or ""
 
+    embedding_vector_val = idea_data.get("embeddingVector") or idea_data.get("embedding_vector")
+    if not embedding_vector_val:
+        try:
+            import ai_duplicity
+            text = ai_duplicity.combine_idea_text(
+                title=idea_data.get("title", ""),
+                category=idea_data.get("category", ""),
+                problem_statement=idea_data.get("problemStatement", ""),
+                description=idea_data.get("description", ""),
+                proposedSolution=idea_data.get("proposedSolution", "")
+            )
+            embedding_vector_val = ai_duplicity.generate_embedding(text)
+        except Exception as e:
+            print("[SAVE IDEA EMBEDDING NOTICE]", e)
+            embedding_vector_val = []
+
+    embedding_str = json.dumps(embedding_vector_val) if embedding_vector_val else None
+
+    duplicity_score = float(idea_data.get("duplicityScore") or idea_data.get("duplicity_score") or 0.0)
+    duplicity_status = idea_data.get("duplicityStatus") or idea_data.get("duplicity_status") or "Initial Screening Passed"
+    matched_idea_id = idea_data.get("matchedIdeaId") or idea_data.get("matched_idea_id")
+
+
+    status_val = idea_data.get("status") or ("Duplicate Flagged" if duplicity_score >= 85.0 else "Pending Review")
+
     if IS_POSTGRES:
         attachment_param = json.dumps(attachment_val) if attachment_val is not None else None
         cursor.execute(
             """INSERT INTO ideas 
-               (id, title, category, functional_area, target_user, author, author_email, problem_statement, description, proposed_solution, expected_benefits, expected_outcome, attachment, status)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending Review') RETURNING *""",
+               (id, title, category, functional_area, target_user, author, author_email, problem_statement, description, proposed_solution, expected_benefits, expected_outcome, attachment, status, embedding_vector, duplicity_score, duplicity_status, matched_idea_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
             (
                 idea_id,
                 idea_data["title"].strip(),
@@ -486,7 +535,12 @@ def save_idea_to_db(idea_data: dict):
                 proposed_solution.strip(),
                 expected_benefits.strip(),
                 expected_benefits.strip(),
-                attachment_param
+                attachment_param,
+                status_val,
+                embedding_str,
+                duplicity_score,
+                duplicity_status,
+                matched_idea_id
             )
         )
         row = cursor.fetchone()
@@ -498,8 +552,8 @@ def save_idea_to_db(idea_data: dict):
         attachment_str = json.dumps(attachment_val) if attachment_val is not None else None
         cursor.execute(
             """INSERT INTO ideas 
-               (id, title, category, functional_area, target_user, author, author_email, problem_statement, description, proposed_solution, expected_benefits, expected_outcome, attachment, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending Review')""",
+               (id, title, category, functional_area, target_user, author, author_email, problem_statement, description, proposed_solution, expected_benefits, expected_outcome, attachment, status, embedding_vector, duplicity_score, duplicity_status, matched_idea_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 idea_id,
                 idea_data["title"].strip(),
@@ -513,7 +567,12 @@ def save_idea_to_db(idea_data: dict):
                 proposed_solution.strip(),
                 expected_benefits.strip(),
                 expected_benefits.strip(),
-                attachment_str
+                attachment_str,
+                status_val,
+                embedding_str,
+                duplicity_score,
+                duplicity_status,
+                matched_idea_id
             )
         )
         conn.commit()
@@ -549,8 +608,13 @@ def save_idea_to_db(idea_data: dict):
         "attachment": attachment_res,
         "status": r["status"],
         "evaluatorNotes": r.get("evaluator_notes") or "",
-        "date": dt_str
+        "date": dt_str,
+        "embeddingVector": r.get("embedding_vector"),
+        "duplicityScore": float(r.get("duplicity_score") or 0.0),
+        "duplicityStatus": r.get("duplicity_status") or "",
+        "matchedIdeaId": r.get("matched_idea_id")
     }
+
 
 def update_idea_status_in_db(idea_id: int, status: str, evaluator_notes: str = ""):
     conn = get_db_connection()
