@@ -15,15 +15,22 @@ from dotenv import load_dotenv
 
 import schemas
 import database
-import ai_duplicity
+
+from contextlib import asynccontextmanager
 
 # Load environment variables
 load_dotenv()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("[SERVER STARTUP] Idea360 API Server initialized successfully.")
+    yield
+
 app = FastAPI(
     title="Idea360 API Server",
     description="Python FastAPI Backend for Idea360 Innovation Portal",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Configure CORS (Supports localhost, 127.0.0.1 and custom domains with credentials)
@@ -342,23 +349,7 @@ def get_ideas(current_user: dict = Depends(get_current_user)):
         print("Get Ideas Error:", err)
         raise HTTPException(status_code=500, detail="Failed to fetch ideas from database.")
 
-@app.post("/api/ideas/check-duplicity")
-def check_idea_duplicity(req: schemas.CheckDuplicityRequest, current_user: dict = Depends(get_current_user)):
-    """Pre-submission API endpoint to check idea similarity score against existing database."""
-    if not req.title and not req.description:
-        raise HTTPException(status_code=400, detail="Title or description is required for duplicacy check.")
 
-    try:
-        existing_ideas = database.get_all_ideas_from_db()
-        idea_dict = req.model_dump()
-        result = ai_duplicity.check_duplicity(idea_dict, existing_ideas)
-        return {
-            "status": "SUCCESS",
-            "duplicityResult": result
-        }
-    except Exception as err:
-        print("[DUPLICITY CHECK ERROR]", err)
-        raise HTTPException(status_code=500, detail="Failed to run duplicacy screening.")
 
 @app.post("/api/ideas", status_code=status.HTTP_201_CREATED)
 def create_idea(req: schemas.IdeaCreateRequest, current_user: dict = Depends(get_current_user)):
@@ -367,16 +358,9 @@ def create_idea(req: schemas.IdeaCreateRequest, current_user: dict = Depends(get
 
     try:
         idea_dict = req.model_dump()
-        
-        # Pre-generate text embedding for admin evaluation comparisons
-        text = ai_duplicity.combine_idea_text(
-            title=idea_dict.get("title", ""),
-            category=idea_dict.get("category", ""),
-            problem_statement=idea_dict.get("problemStatement", ""),
-            description=idea_dict.get("description", ""),
-            proposedSolution=idea_dict.get("proposedSolution", "")
-        )
-        idea_dict["embeddingVector"] = ai_duplicity.generate_embedding(text)
+        idea_dict["embeddingVector"] = []
+        idea_dict["duplicityScore"] = 0.0
+        idea_dict["duplicityStatus"] = "No Duplicate Matches (0.0% Match)"
         idea_dict["status"] = "Pending Review"
 
         saved_idea = database.save_idea_to_db(idea_dict)

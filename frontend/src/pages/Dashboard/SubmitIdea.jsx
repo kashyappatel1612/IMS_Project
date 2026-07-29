@@ -14,7 +14,7 @@ import {
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
-import { saveNewIdea, checkIdeaDuplicity } from "../../utils/ideaStorage";
+import { saveNewIdea } from "../../utils/ideaStorage";
 
 function SubmitIdea() {
   const navigate = useNavigate();
@@ -23,9 +23,9 @@ function SubmitIdea() {
   const [userName, setUserName] = useState("Ayushman");
   const [userEmail, setUserEmail] = useState("");
 
-  // Form Fields - Section 1: Overview & Categorization
+  // Form Fields - Section 1: Basic Idea Info & Categorization
   const [ideaTitle, setIdeaTitle] = useState("");
-  const [ideaCategory, setIdeaCategory] = useState("Healthcare");
+  const [ideaCategory, setIdeaCategory] = useState("Transportation");
   const [functionalArea, setFunctionalArea] = useState("");
   const [targetUser, setTargetUser] = useState("");
 
@@ -34,10 +34,6 @@ function SubmitIdea() {
   const [ideaDescription, setIdeaDescription] = useState("");
   const [proposedSolution, setProposedSolution] = useState("");
   const [expectedBenefits, setExpectedBenefits] = useState("");
-
-  // AI Duplicacy State
-  const [isCheckingDuplicity, setIsCheckingDuplicity] = useState(false);
-  const [duplicityResult, setDuplicityResult] = useState(null);
 
   // File Attachment State
   const [attachment, setAttachment] = useState(null);
@@ -98,30 +94,7 @@ function SubmitIdea() {
     }
   };
 
-  const handleRunDuplicityCheck = async () => {
-    if (!ideaTitle.trim() && !ideaDescription.trim() && !problemStatement.trim()) {
-      alert("Please enter Title, Problem Statement, or Description before running AI Duplicity Check.");
-      return;
-    }
 
-    setIsCheckingDuplicity(true);
-    setDuplicityResult(null);
-
-    try {
-      const res = await checkIdeaDuplicity({
-        title: ideaTitle,
-        category: ideaCategory,
-        problemStatement: problemStatement,
-        description: ideaDescription,
-        proposedSolution: proposedSolution
-      });
-      setDuplicityResult(res);
-    } catch (err) {
-      console.error("AI Check Error:", err);
-    } finally {
-      setIsCheckingDuplicity(false);
-    }
-  };
 
   const [submitting, setSubmitting] = useState(false);
 

@@ -12,7 +12,7 @@ export function getSubmittedIdeas() {
       return [];
     }
     const parsed = JSON.parse(existing);
-    const cleanList = parsed.filter((item) => item.id > 1000);
+    const cleanList = parsed.filter((item) => item && item.id && Number(item.id) > 1000);
     if (cleanList.length !== parsed.length) {
       localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(cleanList));
     }
@@ -79,23 +79,7 @@ export async function saveNewIdea(newIdea) {
   return updatedList;
 }
 
-export async function checkIdeaDuplicity(ideaData) {
-  try {
-    const res = await apiClient.post("/ideas/check-duplicity", {
-      title: ideaData.title || "",
-      category: ideaData.category || "",
-      problemStatement: ideaData.problemStatement || "",
-      description: ideaData.description || "",
-      proposedSolution: ideaData.proposedSolution || ""
-    });
-    if (res.data && res.data.duplicityResult) {
-      return res.data.duplicityResult;
-    }
-  } catch (err) {
-    console.warn("Backend duplicity check notice:", err.message);
-  }
-  return null;
-}
+
 
 export function getIdeaById(id) {
 

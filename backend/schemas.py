@@ -42,13 +42,8 @@ class IdeaCreateRequest(BaseModel):
     expectedOutcome: Optional[str] = ""
     attachment: Optional[Any] = None
 
-class CheckDuplicityRequest(BaseModel):
-    title: str
-    category: Optional[str] = ""
-    problemStatement: Optional[str] = ""
-    description: Optional[str] = ""
-    proposedSolution: Optional[str] = ""
-    ideaId: Optional[int] = None
+
+
 
 
 class IdeaStatusUpdateRequest(BaseModel):

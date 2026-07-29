@@ -47,6 +47,12 @@
   transition: all 0.2s ease;
 }
 
+.knowledge-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08) !important;
+  border-color: var(--primary) !important;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

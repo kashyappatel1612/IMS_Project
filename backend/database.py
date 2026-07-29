@@ -454,6 +454,13 @@ def get_all_ideas_from_db():
             except Exception:
                 formatted_date = str(r["created_at"])
                 
+        emb_val = r.get("embedding_vector")
+        if isinstance(emb_val, str) and emb_val.strip():
+            try:
+                emb_val = json.loads(emb_val)
+            except Exception:
+                emb_val = None
+
         ideas_list.append({
             "id": int(r["id"]),
             "title": r["title"],
@@ -471,7 +478,7 @@ def get_all_ideas_from_db():
             "status": r["status"],
             "evaluatorNotes": r.get("evaluator_notes") or "",
             "date": formatted_date,
-            "embeddingVector": r.get("embedding_vector"),
+            "embeddingVector": emb_val,
             "duplicityScore": float(r.get("duplicity_score") or 0.0),
             "duplicityStatus": r.get("duplicity_status") or "",
             "matchedIdeaId": r.get("matched_idea_id")
@@ -491,30 +498,14 @@ def save_idea_to_db(idea_data: dict):
     proposed_solution = idea_data.get("proposedSolution") or ""
     expected_benefits = idea_data.get("expectedBenefits") or idea_data.get("expectedOutcome") or ""
 
-    embedding_vector_val = idea_data.get("embeddingVector") or idea_data.get("embedding_vector")
-    if not embedding_vector_val:
-        try:
-            import ai_duplicity
-            text = ai_duplicity.combine_idea_text(
-                title=idea_data.get("title", ""),
-                category=idea_data.get("category", ""),
-                problem_statement=idea_data.get("problemStatement", ""),
-                description=idea_data.get("description", ""),
-                proposedSolution=idea_data.get("proposedSolution", "")
-            )
-            embedding_vector_val = ai_duplicity.generate_embedding(text)
-        except Exception as e:
-            print("[SAVE IDEA EMBEDDING NOTICE]", e)
-            embedding_vector_val = []
+    embedding_vector_val = []
+    embedding_str = None
 
-    embedding_str = json.dumps(embedding_vector_val) if embedding_vector_val else None
+    duplicity_score = 0.0
+    duplicity_status = "Initial Screening Passed"
+    matched_idea_id = None
 
-    duplicity_score = float(idea_data.get("duplicityScore") or idea_data.get("duplicity_score") or 0.0)
-    duplicity_status = idea_data.get("duplicityStatus") or idea_data.get("duplicity_status") or "Initial Screening Passed"
-    matched_idea_id = idea_data.get("matchedIdeaId") or idea_data.get("matched_idea_id")
-
-
-    status_val = idea_data.get("status") or ("Duplicate Flagged" if duplicity_score >= 85.0 else "Pending Review")
+    status_val = idea_data.get("status") or "Pending Review"
 
     if IS_POSTGRES:
         attachment_param = json.dumps(attachment_val) if attachment_val is not None else None
@@ -615,6 +606,57 @@ def save_idea_to_db(idea_data: dict):
         "matchedIdeaId": r.get("matched_idea_id")
     }
 
+
+def update_idea_embedding_in_db(idea_id: int, embedding_vector: list):
+    """Updates embedding_vector JSON column for a specific idea."""
+    if not embedding_vector:
+        return
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    embedding_str = json.dumps(embedding_vector)
+    
+    if IS_POSTGRES:
+        cursor.execute("UPDATE ideas SET embedding_vector = %s WHERE id = %s", (embedding_str, idea_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    else:
+        cursor.execute("UPDATE ideas SET embedding_vector = ? WHERE id = ?", (embedding_str, idea_id))
+        conn.commit()
+        conn.close()
+
+def update_idea_duplicity_in_db(idea_id: int, score: float, duplicity_status: str, matched_idea_id: int = None, status: str = None):
+    """Updates duplicity score, status, and matched_idea_id for a specific idea in DB."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if IS_POSTGRES:
+        if status:
+            cursor.execute(
+                "UPDATE ideas SET duplicity_score = %s, duplicity_status = %s, matched_idea_id = %s, status = %s WHERE id = %s",
+                (score, duplicity_status, matched_idea_id, status, idea_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE ideas SET duplicity_score = %s, duplicity_status = %s, matched_idea_id = %s WHERE id = %s",
+                (score, duplicity_status, matched_idea_id, idea_id)
+            )
+        conn.commit()
+        cursor.close()
+        conn.close()
+    else:
+        if status:
+            cursor.execute(
+                "UPDATE ideas SET duplicity_score = ?, duplicity_status = ?, matched_idea_id = ?, status = ? WHERE id = ?",
+                (score, duplicity_status, matched_idea_id, status, idea_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE ideas SET duplicity_score = ?, duplicity_status = ?, matched_idea_id = ? WHERE id = ?",
+                (score, duplicity_status, matched_idea_id, idea_id)
+            )
+        conn.commit()
+        conn.close()
 
 def update_idea_status_in_db(idea_id: int, status: str, evaluator_notes: str = ""):
     conn = get_db_connection()

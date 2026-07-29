@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import { getSubmittedIdeas } from "../../utils/ideaStorage";
+import { getSubmittedIdeas, fetchIdeasFromApi } from "../../utils/ideaStorage";
 
 function InitialScreening() {
   const navigate = useNavigate();
@@ -19,7 +19,9 @@ function InitialScreening() {
   const [filterMode, setFilterMode] = useState("all"); // 'all' | 'Passed' | 'Info Requested' | 'Rejected'
 
   useEffect(() => {
-    setIdeas(getSubmittedIdeas());
+    fetchIdeasFromApi().then((data) => {
+      setIdeas(data || getSubmittedIdeas());
+    });
   }, []);
 
   // Dynamic Metrics
