@@ -72,17 +72,14 @@ export async function saveNewIdea(newIdea) {
   const ideaObject = {
     ...payload,
     date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    status: "Pending Review"
+    status: "Pending PC Allocation"
   };
   const updatedList = [ideaObject, ...currentList];
   localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(updatedList));
   return updatedList;
 }
 
-
-
 export function getIdeaById(id) {
-
   const ideas = getSubmittedIdeas();
   return ideas.find((i) => String(i.id) === String(id)) || null;
 }
@@ -99,6 +96,35 @@ export function updateIdeaStatus(id, newStatus, evaluatorNotes = "") {
   // Sync Status Update to FastAPI Backend Async
   apiClient.patch(`/ideas/${id}/status`, { status: newStatus, evaluatorNotes }).catch((err) => {
     console.warn("Backend status sync notice:", err.message);
+  });
+
+  return updatedList;
+}
+
+export function updateIdeaAllocation(id, allocationData) {
+  const currentList = getSubmittedIdeas();
+  const updatedList = currentList.map((idea) => {
+    if (String(idea.id) === String(id)) {
+      return {
+        ...idea,
+        assignedReviewer: allocationData.assignedReviewer,
+        reviewerDeadline: allocationData.reviewerDeadline,
+        assignedPM: allocationData.assignedPM,
+        pmDeadline: allocationData.pmDeadline,
+        coordinatorNotes: allocationData.coordinatorNotes || "",
+        status: allocationData.status || "Assigned to Reviewer & PM",
+        allocatedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      };
+    }
+    return idea;
+  });
+  localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(updatedList));
+
+  apiClient.patch(`/ideas/${id}/status`, {
+    status: allocationData.status || "Assigned to Reviewer & PM",
+    evaluatorNotes: `PC Allocation: Reviewer (${allocationData.assignedReviewer}, Deadline: ${allocationData.reviewerDeadline}) | PM (${allocationData.assignedPM}, Deadline: ${allocationData.pmDeadline})`
+  }).catch((err) => {
+    console.warn("Backend allocation sync notice:", err.message);
   });
 
   return updatedList;

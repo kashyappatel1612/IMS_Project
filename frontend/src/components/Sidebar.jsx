@@ -13,7 +13,8 @@ import {
   Award,
   BookOpen,
   FileBarChart,
-  Settings
+  Settings,
+  ShieldCheck
 } from "lucide-react";
 import imsLogo from "../assets/ims-logo.jpg";
 
@@ -45,7 +46,7 @@ function Sidebar({ isOpen }) {
     { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
     { id: "execution", label: "Execution", icon: PlayCircle, path: "/execution" },
     { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
-    { id: "benefits-tracking", label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
+    { id: "quality-assurance", label: "Quality Assurance", icon: ShieldCheck, path: "/quality-assurance" },
     { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
     { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
@@ -61,7 +62,7 @@ function Sidebar({ isOpen }) {
 
   // Role-Specific Navigation Menu Logic
   const getMenuForRole = () => {
-    if (userRole === "Administrator") {
+    if (userRole === "Administrator" || userRole === "Project Coordinator") {
       return allNavItems;
     }
 

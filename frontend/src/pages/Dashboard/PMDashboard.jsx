@@ -18,7 +18,8 @@ import {
   User,
   Paperclip,
   Download,
-  Check
+  Check,
+  ShieldCheck
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
@@ -182,21 +183,21 @@ function PMDashboard({ userName }) {
           </span>
         </div>
 
-        {/* Card 4: Benefits Tracking */}
+        {/* Card 4: Quality Assurance */}
         <div
           className="kpi-mini-card"
-          onClick={() => navigate("/benefits-tracking")}
+          onClick={() => navigate("/quality-assurance")}
           style={{ cursor: "pointer", border: "1px solid #e2e8f0" }}
-          title="Click to view Benefits Realization"
+          title="Click to view Quality Assurance & Test Sign-off"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">Benefits Realization</span>
-            <div className="kpi-icon-pill pill-amber">
-              <Award size={20} />
+            <span className="kpi-label-txt">Quality Assurance</span>
+            <div className="kpi-icon-pill pill-green">
+              <ShieldCheck size={20} />
             </div>
           </div>
-          <span className="kpi-num-val" style={{ fontSize: "16px", color: "#d97706", fontWeight: "700" }}>
-            Track Benefits →
+          <span className="kpi-num-val" style={{ fontSize: "16px", color: "#16a34a", fontWeight: "700" }}>
+            QA Sign-offs →
           </span>
         </div>
       </div>

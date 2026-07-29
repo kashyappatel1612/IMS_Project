@@ -108,6 +108,7 @@ function Login() {
               required
             >
               <option value="User">User</option>
+              <option value="Project Coordinator">Project Coordinator</option>
               <option value="Administrator">Administrator</option>
               <option value="Business Analyst">Business Analyst</option>
               <option value="Reviewer">Reviewer</option>
@@ -122,6 +123,7 @@ function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             icon={Mail}
+            autoComplete="username"
             required
           />
 
@@ -134,6 +136,7 @@ function Login() {
             icon={Lock}
             rightAction={showPassword ? EyeOff : Eye}
             onRightActionClick={() => setShowPassword(!showPassword)}
+            autoComplete="current-password"
             required
           />
 

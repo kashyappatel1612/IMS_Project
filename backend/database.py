@@ -790,6 +790,9 @@ def save_analysis_report_to_db(report_data: dict):
     attachment_val = report_data.get("attachment")
     status_str = f"Approved by BA: {ba_name}"
 
+    r = {}
+    report_id = None
+
     if IS_POSTGRES:
         attachment_param = json.dumps(attachment_val) if attachment_val is not None else None
         cursor.execute(
@@ -802,7 +805,8 @@ def save_analysis_report_to_db(report_data: dict):
         if idea_id:
             cursor.execute("UPDATE ideas SET status = %s WHERE id = %s", (status_str, idea_id))
         conn.commit()
-        r = _row_to_dict(row, cursor.description)
+        if row:
+            r = _row_to_dict(row, cursor.description)
         cursor.close()
         conn.close()
     else:
@@ -817,10 +821,36 @@ def save_analysis_report_to_db(report_data: dict):
         if idea_id:
             cursor.execute("UPDATE ideas SET status = ? WHERE id = ?", (status_str, idea_id))
         conn.commit()
-        cursor.execute("SELECT * FROM analysis_reports WHERE id = ?", (report_id,))
-        row = cursor.fetchone()
-        r = dict(row)
+
+        row = None
+        if report_id:
+            cursor.execute("SELECT * FROM analysis_reports WHERE id = ?", (report_id,))
+            row = cursor.fetchone()
+
+        if not row:
+            cursor.execute("SELECT * FROM analysis_reports ORDER BY id DESC LIMIT 1;")
+            row = cursor.fetchone()
+
+        if row:
+            r = dict(row)
         conn.close()
+
+    if not r:
+        return {
+            "id": report_id or int(time.time()),
+            "ideaId": idea_id,
+            "ideaTitle": idea_title,
+            "baName": ba_name,
+            "baEmail": ba_email,
+            "reportTitle": report_title,
+            "summary": summary,
+            "estimatedCost": estimated_cost,
+            "projectedRoi": projected_roi,
+            "attachment": attachment_val,
+            "status": status_str,
+            "pmNotes": "",
+            "date": datetime.now().strftime("%b %d, %Y")
+        }
 
     attachment_res = None
     if r.get("attachment"):

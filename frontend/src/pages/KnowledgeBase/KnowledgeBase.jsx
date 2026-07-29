@@ -37,11 +37,21 @@ const CATEGORIES = [
   "FAQs"
 ];
 
+const ROLE_FILTERS = [
+  "All Roles",
+  "Business Analyst",
+  "Reviewer",
+  "Project Manager",
+  "User",
+  "Administrator"
+];
+
 const DEFAULT_ARTICLES = [
   {
     id: 1,
     title: "How to Quantify Expected Business Benefits & ROI",
     category: "ROI & Financial Templates",
+    targetRoles: ["Business Analyst", "Project Manager", "User"],
     readTime: "5 min read",
     author: "Enterprise Innovation Office",
     updatedDate: "Jul 25, 2026",
@@ -67,6 +77,7 @@ Quantifying business benefits is crucial for moving your idea through the Busine
     id: 2,
     title: "Writing a Winning Innovation Problem Statement",
     category: "Submission Guidelines",
+    targetRoles: ["User", "Business Analyst"],
     readTime: "4 min read",
     author: "Program Management Office",
     updatedDate: "Jul 20, 2026",
@@ -91,6 +102,7 @@ A great proposal clearly answers three fundamental questions:
     id: 3,
     title: "Understanding the 6-Stage Gate Evaluation Process",
     category: "Evaluation & Stage Gates",
+    targetRoles: ["Reviewer", "Project Manager", "Business Analyst", "Administrator"],
     readTime: "6 min read",
     author: "Governance Committee",
     updatedDate: "Jul 18, 2026",
@@ -112,6 +124,7 @@ A great proposal clearly answers three fundamental questions:
     id: 4,
     title: "Intellectual Property (IP) & Innovation Rewards Policy",
     category: "Policies & IP Rules",
+    targetRoles: ["User", "Administrator", "Reviewer"],
     readTime: "7 min read",
     author: "Legal & People Operations",
     updatedDate: "Jul 10, 2026",
@@ -132,6 +145,7 @@ A great proposal clearly answers three fundamental questions:
     id: 5,
     title: "Business Feasibility & Market Validation Guidelines",
     category: "Evaluation & Stage Gates",
+    targetRoles: ["Business Analyst", "Reviewer"],
     readTime: "5 min read",
     author: "Business Analysis Team",
     updatedDate: "Jul 05, 2026",
@@ -152,6 +166,7 @@ Business Analysts assess proposals using four core dimensions:
     id: 6,
     title: "Sprint Handoff & Agile Project Execution",
     category: "Submission Guidelines",
+    targetRoles: ["Project Manager", "Business Analyst"],
     readTime: "4 min read",
     author: "Agile PMO",
     updatedDate: "Jun 28, 2026",
@@ -166,6 +181,27 @@ Once an idea receives Stage 4 Budget Approval:
 2. The author joins the kickoff sprint planning meeting as Product Champion.
 3. Deliverables are broken into 2-week agile sprints with bi-weekly progress updates.
     `
+  },
+  {
+    id: 7,
+    title: "Reviewer Stage-1 Initial Screening Rubric",
+    category: "Evaluation & Stage Gates",
+    targetRoles: ["Reviewer", "Administrator"],
+    readTime: "5 min read",
+    author: "Review Board",
+    updatedDate: "Jul 28, 2026",
+    icon: ShieldCheck,
+    badgeColor: "#0284c7",
+    summary: "Official evaluation criteria for Reviewers to score novelty, strategic fit, and technical viability.",
+    content: `
+### Reviewer Screening Rubric
+
+When evaluating new submissions, Reviewers score ideas on a 1-5 scale:
+1. **Strategic Alignment**: Does it align with current quarterly business objectives?
+2. **Impact & Scalability**: Can this solution be expanded across multiple departments?
+3. **Clarity of Problem Statement**: Is the pain point defined with quantifiable evidence?
+4. **Feasibility**: Can this be prototyped within 90 days?
+    `
   }
 ];
 
@@ -173,6 +209,7 @@ const DOWNLOADABLE_TEMPLATES = [
   {
     id: 1,
     title: "Innovation Proposal Presentation Deck",
+    targetRole: "User / Submitter",
     format: "PPTX",
     size: "1.4 MB",
     description: "Standard 5-slide pitch template for executive review meetings.",
@@ -181,6 +218,7 @@ const DOWNLOADABLE_TEMPLATES = [
   {
     id: 2,
     title: "Financial Feasibility & ROI Calculator Spreadsheet",
+    targetRole: "Business Analyst",
     format: "XLSX",
     size: "820 KB",
     description: "Excel model with pre-built formulas for NPV, IRR, and labor cost savings.",
@@ -189,6 +227,7 @@ const DOWNLOADABLE_TEMPLATES = [
   {
     id: 3,
     title: "Initial Screening Checklist Rubric",
+    targetRole: "Reviewer",
     format: "PDF",
     size: "450 KB",
     description: "Official evaluation checklist used by Stage 1 evaluators.",
@@ -196,11 +235,12 @@ const DOWNLOADABLE_TEMPLATES = [
   },
   {
     id: 4,
-    title: "Employee Intellectual Property Disclosure Form",
-    format: "PDF",
-    size: "310 KB",
-    description: "Legal disclosure template for patentable employee innovations.",
-    icon: ShieldCheck
+    title: "Agile Project Execution & WBS Template",
+    targetRole: "Project Manager",
+    format: "XLSX",
+    size: "610 KB",
+    description: "Work Breakdown Structure and sprint plan template for active projects.",
+    icon: PlayCircle
   }
 ];
 
@@ -231,12 +271,12 @@ const FAQS = [
     answer: "During Stage 4 (Estimation), Engineering Leads and Project Managers evaluate resource requirements, software licensing, and development hours to establish the project budget and timeline."
   }
 ];
-
 function KnowledgeBase() {
   const [userRole, setUserRole] = useState("User");
   const [articles, setArticles] = useState(DEFAULT_ARTICLES);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Articles");
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState("All Roles");
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [expandedFaq, setExpandedFaq] = useState(null);
 
@@ -274,15 +314,18 @@ function KnowledgeBase() {
     }
   }, []);
 
-  // Filtered Articles based on Search & Category
+  // Filtered Articles based on Search, Category & Role
   const filteredArticles = articles.filter((article) => {
     const matchesCategory =
       selectedCategory === "All Articles" || article.category === selectedCategory;
+    const matchesRole =
+      selectedRoleFilter === "All Roles" ||
+      (article.targetRoles && article.targetRoles.includes(selectedRoleFilter));
     const matchesSearch =
       article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       article.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
       article.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesRole && matchesSearch;
   });
 
   const toggleFaq = (id) => {
@@ -391,33 +434,71 @@ function KnowledgeBase() {
             />
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCategory(cat)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "20px",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  border: selectedCategory === cat ? "1px solid var(--primary)" : "1px solid #e2e8f0",
-                  background: selectedCategory === cat ? "var(--primary)" : "#ffffff",
-                  color: selectedCategory === cat ? "#ffffff" : "#475569",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
-                }}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* Category Filter Pills */}
+          <div>
+            <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "8px" }}>
+              Filter By Topic:
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "20px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    border: selectedCategory === cat ? "1px solid var(--primary)" : "1px solid #e2e8f0",
+                    background: selectedCategory === cat ? "var(--primary)" : "#ffffff",
+                    color: selectedCategory === cat ? "#ffffff" : "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Role Target Filter Pills */}
+          <div style={{ borderTop: "1px dashed #e2e8f0", paddingTop: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+              <UserCheck size={14} color="#6366f1" />
+              <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Target Role Filter:
+              </span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {ROLE_FILTERS.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => setSelectedRoleFilter(role)}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: "16px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    border: selectedRoleFilter === role ? "1px solid #6366f1" : "1px solid #e2e8f0",
+                    background: selectedRoleFilter === role ? "#eef2ff" : "#ffffff",
+                    color: selectedRoleFilter === role ? "#4f46e5" : "#64748b",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  {role === userRole ? `🎯 ${role} (You)` : role}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </Card>
 
       {/* Featured Hero Guide */}
-      {selectedCategory === "All Articles" && !searchQuery && (
+      {selectedCategory === "All Articles" && selectedRoleFilter === "All Roles" && !searchQuery && (
         <div
           style={{
             background: "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)",
@@ -466,7 +547,7 @@ function KnowledgeBase() {
       <div style={{ marginBottom: "32px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
           <h3 style={{ fontSize: "18px", fontWeight: "700", margin: 0 }}>
-            {selectedCategory} ({filteredArticles.length})
+            {selectedCategory} {selectedRoleFilter !== "All Roles" && `• For ${selectedRoleFilter}`} ({filteredArticles.length})
           </h3>
         </div>
 
@@ -482,6 +563,8 @@ function KnowledgeBase() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
             {filteredArticles.map((art) => {
               const IconComp = art.icon || BookOpen;
+              const isRecommendedForUser = art.targetRoles && art.targetRoles.includes(userRole);
+
               return (
                 <div
                   key={art.id}
@@ -489,18 +572,26 @@ function KnowledgeBase() {
                   style={{
                     background: "#ffffff",
                     borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
+                    border: isRecommendedForUser ? "1.5px solid #6366f1" : "1px solid #e2e8f0",
                     padding: "20px",
                     cursor: "pointer",
                     transition: "all 0.2s ease",
                     display: "flex",
                     flexDirection: "column",
                     justify: "space-between",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                    boxShadow: isRecommendedForUser ? "0 4px 12px rgba(99, 102, 241, 0.08)" : "0 2px 4px rgba(0,0,0,0.02)"
                   }}
                   className="knowledge-card-hover"
                 >
                   <div>
+                    {isRecommendedForUser && (
+                      <div style={{ marginBottom: "8px" }}>
+                        <span style={{ background: "#e0e7ff", color: "#4338ca", fontSize: "10px", fontWeight: "800", padding: "2px 8px", borderRadius: "6px" }}>
+                          ⭐ Recommended for {userRole}
+                        </span>
+                      </div>
+                    )}
+
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                       <span
                         style={{

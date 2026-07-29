@@ -9,7 +9,8 @@ import {
   X,
   CheckCircle2,
   Send,
-  UploadCloud
+  UploadCloud,
+  Info
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
@@ -26,6 +27,7 @@ function SubmitIdea() {
   // Form Fields - Section 1: Basic Idea Info & Categorization
   const [ideaTitle, setIdeaTitle] = useState("");
   const [ideaCategory, setIdeaCategory] = useState("Transportation");
+  const [customCategory, setCustomCategory] = useState("");
   const [functionalArea, setFunctionalArea] = useState("");
   const [targetUser, setTargetUser] = useState("");
 
@@ -107,12 +109,19 @@ function SubmitIdea() {
       return;
     }
 
+    if (ideaCategory === "Others" && !customCategory.trim()) {
+      alert("Please specify your Industry Domain in the text field.");
+      return;
+    }
+
+    const finalCategory = ideaCategory === "Others" ? customCategory.trim() : ideaCategory;
+
     setSubmitting(true);
 
     try {
       await saveNewIdea({
         title: ideaTitle,
-        category: ideaCategory,
+        category: finalCategory,
         functionalArea: functionalArea,
         targetUser: targetUser,
         author: userName || "User",
@@ -125,7 +134,7 @@ function SubmitIdea() {
         attachment: attachment
       });
 
-      alert(`Idea "${ideaTitle}" submitted successfully to PostgreSQL!`);
+      alert(`Your idea "${ideaTitle}" is submitted successfully!`);
       navigate("/dashboard");
     } catch (err) {
       alert("Failed to save idea to database.");
@@ -190,9 +199,15 @@ function SubmitIdea() {
                 <select
                   className="custom-input-elem custom-select-elem"
                   value={ideaCategory}
-                  onChange={(e) => setIdeaCategory(e.target.value)}
+                  onChange={(e) => {
+                    setIdeaCategory(e.target.value);
+                    if (e.target.value !== "Others") {
+                      setCustomCategory("");
+                    }
+                  }}
                   required
                 >
+                  <option value="IT">IT (Information Technology)</option>
                   <option value="Healthcare">Healthcare</option>
                   <option value="Insurance">Insurance</option>
                   <option value="Banking">Banking</option>
@@ -209,6 +224,19 @@ function SubmitIdea() {
                   <option value="Travel">Travel</option>
                   <option value="Others">Others</option>
                 </select>
+
+                {ideaCategory === "Others" && (
+                  <div style={{ marginTop: "12px", animation: "fadeIn 0.2s ease-in-out" }}>
+                    <Input
+                      label="Specify Custom Industry Domain"
+                      placeholder="Type your custom industry domain here (e.g. FinTech, AI, Real Estate)..."
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      autoFocus
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <Input
@@ -232,7 +260,21 @@ function SubmitIdea() {
           <div style={{ height: "20px" }}></div>
 
           {/* Section 2: Problem & Solution Statement */}
-          <Card title="2. Problem & Solution Statement" subtitle="Detailed explanation of the problem and proposed solution">
+          <Card title="2. Problem & Solution Statement" subtitle="Structured instructions & guidelines for detailing your innovation proposal">
+            {/* Structured Instructions & Guidelines Box */}
+            <div className="form-instruction-banner">
+              <div className="form-instruction-title">
+                <Info size={18} />
+                <span>Instructions for Problem & Solution Statement:</span>
+              </div>
+              <ul className="form-instruction-list">
+                <li><strong>Problem Statement:</strong> Describe the problem statement, customer pain point, or operational inefficiency.</li>
+                <li><strong>Idea Description:</strong> Breakdown how your innovative concept effectively addresses the issue.</li>
+                <li><strong>Proposed Solution (Optional):</strong> Detail any technical, process, or architectural specifics.</li>
+                <li><strong>Expected Benefits:</strong> Highlight quantifiable outcomes such as estimated time savings, ROI, or UX impact.</li>
+              </ul>
+            </div>
+
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
               <div className="input-field-group">
                 <label className="input-label">
@@ -241,7 +283,7 @@ function SubmitIdea() {
                 <textarea
                   className="custom-input-elem"
                   rows={4}
-                  placeholder="Describe the exact bottleneck, customer pain point, or inefficiency..."
+                  placeholder="Describe the problem statement, customer pain point, or operational inefficiency..."
                   value={problemStatement}
                   onChange={(e) => setProblemStatement(e.target.value)}
                   required

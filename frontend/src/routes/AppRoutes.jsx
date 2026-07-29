@@ -15,7 +15,7 @@ import Estimation from "../pages/Estimation/Estimation";
 import ProjectList from "../pages/Projects/ProjectList";
 import Execution from "../pages/Execution/Execution";
 import ProgressTracking from "../pages/Progress/ProgressTracking";
-import BenefitsTracking from "../pages/Benefits/BenefitsTracking";
+import QualityAssurance from "../pages/QualityAssurance/QualityAssurance";
 import KnowledgeBase from "../pages/KnowledgeBase/KnowledgeBase";
 import Settings from "../pages/Settings/Settings";
 
@@ -114,10 +114,10 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/benefits-tracking"
+            path="/quality-assurance"
             element={
               <ProtectedRoute allowedRoles={["Administrator", "Project Manager", "Business Analyst"]}>
-                <BenefitsTracking />
+                <QualityAssurance />
               </ProtectedRoute>
             }
           />

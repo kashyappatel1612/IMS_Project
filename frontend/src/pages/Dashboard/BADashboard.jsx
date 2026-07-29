@@ -420,16 +420,24 @@ function BADashboard({ userName }) {
         >
           <form onSubmit={handleUploadSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div className="input-field-group">
-              <label className="input-label">Select Proposal / Idea</label>
+              <label className="input-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>Select Proposal / Idea *</span>
+                <span style={{ fontSize: "11px", color: "#6366f1", fontWeight: "700" }}>✓ Feasibility Passed Only ({baQueue.length})</span>
+              </label>
               <select
                 className="custom-input-elem"
                 value={selectedIdeaId}
                 onChange={(e) => handleIdeaSelect(e.target.value)}
+                required
               >
-                <option value="">-- Select Proposal --</option>
-                {ideas.map((i) => (
-                  <option key={i.id} value={i.id}>{i.title} ({i.category})</option>
-                ))}
+                <option value="">-- Choose Proposal (Feasibility Passed) --</option>
+                {baQueue.length === 0 ? (
+                  <option value="" disabled>-- No proposals currently passed Stage 2 Feasibility Review --</option>
+                ) : (
+                  baQueue.map((i) => (
+                    <option key={i.id} value={i.id}>{i.title} [{i.category}] — Status: {i.status}</option>
+                  ))
+                )}
               </select>
             </div>
 

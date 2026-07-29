@@ -2,7 +2,8 @@
  * Utility functions to manage Recent Login History (All 5 Roles Quick Switcher)
  */
 
-export const ALL_5_ROLES = [
+export const ALL_6_ROLES = [
+  { username: "Project Coordinator", email: "pc@imsgroup.com", role: "Project Coordinator" },
   { username: "Administrator", email: "admin@imsgroup.com", role: "Administrator" },
   { username: "Business Analyst Lead", email: "ba@imsgroup.com", role: "Business Analyst" },
   { username: "Expert Reviewer", email: "reviewer@imsgroup.com", role: "Reviewer" },
@@ -18,18 +19,18 @@ export function getLoginHistory() {
       history = JSON.parse(existingStr);
     }
 
-    // Ensure all 5 roles are present in history
-    ALL_5_ROLES.forEach((defAcc) => {
+    // Ensure all 6 roles are present in history
+    ALL_6_ROLES.forEach((defAcc) => {
       if (!history.some((item) => item.role === defAcc.role)) {
         history.push(defAcc);
       }
     });
 
-    localStorage.setItem("idea360LoginHistory", JSON.stringify(history.slice(0, 5)));
-    return history.slice(0, 5);
+    localStorage.setItem("idea360LoginHistory", JSON.stringify(history.slice(0, 6)));
+    return history.slice(0, 6);
   } catch (err) {
     console.error("Error loading login history", err);
-    return ALL_5_ROLES;
+    return ALL_6_ROLES;
   }
 }
 
@@ -48,15 +49,15 @@ export function saveToLoginHistory(account) {
       timestamp: new Date().toISOString()
     });
 
-    // Merge any missing roles from ALL_5_ROLES
-    ALL_5_ROLES.forEach((defAcc) => {
+    // Merge any missing roles from ALL_6_ROLES
+    ALL_6_ROLES.forEach((defAcc) => {
       if (!history.some((item) => item.role === defAcc.role)) {
         history.push(defAcc);
       }
     });
 
-    const final5 = history.slice(0, 5);
-    localStorage.setItem("idea360LoginHistory", JSON.stringify(final5));
+    const final6 = history.slice(0, 6);
+    localStorage.setItem("idea360LoginHistory", JSON.stringify(final6));
   } catch (err) {
     console.error("Error saving login history", err);
   }

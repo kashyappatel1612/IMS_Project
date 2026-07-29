@@ -20,6 +20,7 @@ import AdminDashboard from "./AdminDashboard";
 import BADashboard from "./BADashboard";
 import ReviewerDashboard from "./ReviewerDashboard";
 import PMDashboard from "./PMDashboard";
+import PCDashboard from "./PCDashboard";
 import { getSubmittedIdeas } from "../../utils/ideaStorage";
 
 function Dashboard() {
@@ -53,6 +54,11 @@ function Dashboard() {
 
     setAllIdeas(getSubmittedIdeas());
   }, []);
+
+  // 0. Project Coordinator Dashboard
+  if (userRole === "Project Coordinator") {
+    return <PCDashboard userName={userName} />;
+  }
 
   // 1. Administrator Dashboard
   if (userRole === "Administrator") {

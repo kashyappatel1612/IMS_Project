@@ -32,6 +32,7 @@ import {
 import { fetchAllIdeas, fetchAnalysisReports } from "../../services/api";
 
 function BusinessAnalysis() {
+  const [userRole, setUserRole] = useState("User");
   const [ideas, setIdeas] = useState([]);
   const [reports, setReports] = useState([]);
   const [selectedIdeaId, setSelectedIdeaId] = useState("");
@@ -54,6 +55,7 @@ function BusinessAnalysis() {
     if (savedUserStr) {
       try {
         const u = JSON.parse(savedUserStr);
+        if (u.role) setUserRole(u.role);
         if (u.username) setBaName(u.username);
         if (u.email) setBaEmail(u.email);
       } catch (e) {
@@ -175,6 +177,30 @@ function BusinessAnalysis() {
     }
   };
 
+  // Helper to match submitted report to an idea
+  const getReportForIdea = (ideaId, ideaTitle) => {
+    return reports.find(
+      (r) =>
+        (r.ideaId && String(r.ideaId) === String(ideaId)) ||
+        (r.ideaTitle && r.ideaTitle.toLowerCase() === (ideaTitle || "").toLowerCase())
+    );
+  };
+
+  // Filter ONLY ideas that passed Stage 2 Feasibility Review
+  const feasibleIdeas = ideas.filter((item) => {
+    const s = item.status || "";
+    if (s.includes("Not ") || s.includes("Rejected")) return false;
+    return (
+      s.includes("Feasibility Approved") ||
+      s.includes("Approved by BA") ||
+      s.includes("Business Analysis") ||
+      s.includes("Estimation") ||
+      s.includes("Project") ||
+      s.includes("Execution") ||
+      s.includes("Benefits")
+    );
+  });
+
   return (
     <div className="dashboard-wrapper">
       {/* Header Banner */}
@@ -186,7 +212,11 @@ function BusinessAnalysis() {
               <Briefcase size={14} /> Stage 3 Business & Commercial Evaluation
             </span>
           </div>
-          <p>Upload comprehensive business case reports, financial ROI projections, and submit directly to Project Manager (PM).</p>
+          <p>
+            {userRole === "Business Analyst"
+              ? "Upload comprehensive business case reports, financial ROI projections, and submit directly to Project Manager (PM)."
+              : "Track proposals accepted from Stage 2 Feasibility Review, their assigned Business Analysts, and report submission status."}
+          </p>
         </div>
       </div>
 
@@ -212,268 +242,105 @@ function BusinessAnalysis() {
         </div>
       )}
 
-      {/* Main Grid: Upload Form (Left) & Reports Table (Right) */}
-      <div className="screening-workspace-grid">
-        {/* LEFT COLUMN: Upload Analysis Report Form */}
-        <div className="screening-left-col">
-          <Card
-            title="1. Upload & Send Analysis Report to PM"
-            subtitle="Fill BA details, attach analysis document & dispatch to Project Manager"
-          >
-            <form onSubmit={handleSubmitReport} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* Select Idea Dropdown */}
-              <div className="input-field-group">
-                <label className="input-label">Select Proposal / Idea to Analyze</label>
-                <select
-                  className="custom-input-elem"
-                  value={selectedIdeaId}
-                  onChange={(e) => handleIdeaSelect(e.target.value)}
-                  style={{ fontSize: "14px", fontWeight: "600" }}
-                >
-                  <option value="">-- Choose Proposal from Innovation Queue --</option>
-                  {ideas.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title} [{item.category}] — Current: {item.status}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* BA Name & Email */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <Input
-                  label="Business Analyst (BA) Name"
-                  placeholder="e.g. Ayushman Raj"
-                  icon={User}
-                  value={baName}
-                  onChange={(e) => setBaName(e.target.value)}
-                  required
-                />
-                <Input
-                  label="BA Email Address"
-                  placeholder="e.g. ba@company.com"
-                  icon={Mail}
-                  value={baEmail}
-                  onChange={(e) => setBaEmail(e.target.value)}
-                />
-              </div>
-
-              {/* Report Title */}
-              <Input
-                label="Analysis Report Title"
-                placeholder="e.g. Detailed Financial & Technical Feasibility Study"
-                icon={FileText}
-                value={reportTitle}
-                onChange={(e) => setReportTitle(e.target.value)}
-                required
-              />
-
-              {/* Financial Cost & ROI Projections */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <Input
-                  label="Estimated Implementation Cost"
-                  placeholder="e.g. $45,000 / INR 5,00,000"
-                  icon={DollarSign}
-                  value={estimatedCost}
-                  onChange={(e) => setEstimatedCost(e.target.value)}
-                />
-                <Input
-                  label="Projected Annual ROI / Value"
-                  placeholder="e.g. 320% ROI / $150k Annual Benefit"
-                  icon={TrendingUp}
-                  value={projectedRoi}
-                  onChange={(e) => setProjectedRoi(e.target.value)}
-                />
-              </div>
-
-              {/* Executive Summary / Notes */}
-              <div className="input-field-group">
-                <label className="input-label">Executive Summary & Commercial Analysis Notes *</label>
-                <textarea
-                  className="custom-input-elem"
-                  rows={4}
-                  placeholder="Provide key insights, risk assessment, payback period, and strategic alignment notes for the PM..."
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  required
-                ></textarea>
-              </div>
-
-              {/* Upload File Box */}
-              <div className="input-field-group">
-                <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Paperclip size={14} /> Upload Analysis Report Document (PDF, DOCX, XLSX, Images)
-                </label>
-
-                {!reportFile ? (
-                  <div
-                    style={{
-                      border: "2px dashed #cbd5e1",
-                      borderRadius: "10px",
-                      padding: "20px",
-                      textAlign: "center",
-                      background: "#f8fafc",
-                      cursor: "pointer",
-                      transition: "border-color 0.2s"
-                    }}
-                    onClick={() => document.getElementById("baReportFileInput")?.click()}
-                  >
-                    <Upload size={28} color="#6366f1" style={{ marginBottom: "6px" }} />
-                    <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)" }}>
-                      Click to Browse or Drag & Drop Report File
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                      Supports PDF, DOCX, XLSX, CSV, PNG, JPG (Max 10MB)
-                    </div>
-                    <input
-                      id="baReportFileInput"
-                      type="file"
-                      style={{ display: "none" }}
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      background: "#e0e7ff",
-                      border: "1px solid #c7d2fe",
-                      padding: "12px 16px",
-                      borderRadius: "10px"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <FileText size={22} color="#4f46e5" />
-                      <div>
-                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e1b4b" }}>
-                          {reportFile.fileName}
-                        </div>
-                        <div style={{ fontSize: "11px", color: "#4338ca" }}>
-                          {reportFile.fileSize}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setReportFile(null)}
-                      style={{
-                        background: "#fee2e2",
-                        border: "none",
-                        color: "#ef4444",
-                        padding: "6px",
-                        borderRadius: "6px",
-                        cursor: "pointer"
-                      }}
-                      title="Remove file"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                variant="primary"
-                icon={Send}
-                disabled={isSubmitting}
-                style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: "15px" }}
-              >
-                {isSubmitting ? "Dispatching Report to PM..." : "Send Analysis Report to Project Manager (PM)"}
-              </Button>
-            </form>
-          </Card>
-        </div>
-
-        {/* RIGHT COLUMN: Submitted Analysis Reports Table */}
-        <div className="screening-right-col">
-          <Card
-            title={`2. Submitted Analysis Reports (${reports.length})`}
-            subtitle="Track reports dispatched to Project Manager & current approval status"
-          >
-            <div className="data-table-wrapper">
-              <table className="enterprise-table">
-                <thead>
+      {/* ROLE-BASED VIEW SPLIT */}
+      {userRole !== "Business Analyst" ? (
+        /* ADMIN, PROJECT MANAGER & REVIEWER VIEW: Status Tracking Board */
+        <Card
+          title={`Feasibility Accepted Proposals & BA Report Status (${feasibleIdeas.length})`}
+          subtitle="Overview of proposals passed from Stage 2 Feasibility Review, assigned Business Analyst, and report status"
+        >
+          <div className="data-table-wrapper">
+            <table className="enterprise-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "22%" }}>Project Title & Category</th>
+                  <th style={{ width: "35%" }}>Problem Statement</th>
+                  <th style={{ width: "18%" }}>Assigned Business Analyst</th>
+                  <th style={{ width: "15%" }}>Report Submission Status</th>
+                  <th style={{ width: "10%" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feasibleIdeas.length === 0 ? (
                   <tr>
-                    <th>Proposal / Report Title</th>
-                    <th>Prepared & Approved By</th>
-                    <th>Financial ROI</th>
-                    <th>Current Status</th>
-                    <th>Action</th>
+                    <td colSpan={5} className="empty-state-cell">
+                      <div className="empty-state-flex" style={{ padding: "32px 0" }}>
+                        <Inbox size={36} color="var(--text-light)" />
+                        <span className="empty-state-title">No Feasibility Approved Proposals Found</span>
+                        <span className="empty-state-sub">
+                          Proposals accepted in Stage 2 Feasibility Review will automatically appear here.
+                        </span>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {reports.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="empty-state-cell">
-                        <div className="empty-state-flex" style={{ padding: "28px 0" }}>
-                          <Inbox size={32} color="var(--text-light)" />
-                          <span className="empty-state-title">No Analysis Reports Uploaded Yet</span>
-                          <span className="empty-state-sub">Use the form on the left to upload & send an analysis report to PM.</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    reports.map((rep) => {
-                      const isBaApproved = rep.status.includes("Approved by BA");
-                      const isPmAccepted = rep.status.includes("Accepted by PM") || rep.status.includes("Execution");
+                ) : (
+                  feasibleIdeas.map((item) => {
+                    const rep = getReportForIdea(item.id, item.title);
+                    const isSubmitted = Boolean(rep);
+                    const assignedBaName = rep?.baName || item.assignedBA || "Nushkiee (Business Analyst)";
 
-                      return (
-                        <tr key={rep.id}>
-                          <td>
-                            <div style={{ fontWeight: "700", color: "var(--text-dark)" }}>
-                              {rep.reportTitle || rep.ideaTitle}
-                            </div>
-                            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                              Idea: {rep.ideaTitle} • {rep.date}
-                            </div>
-                          </td>
-                          <td>
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div style={{ fontWeight: "700", color: "var(--text-dark)", fontSize: "14px" }}>
+                            {item.title}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                            Category: {item.category} • Date: {item.date || "Jul 2026"}
+                          </div>
+                        </td>
+                        <td>
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--text-main)",
+                              margin: 0,
+                              lineHeight: "1.4",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden"
+                            }}
+                          >
+                            {item.problemStatement || item.description || item.proposedSolution || "No problem statement specified."}
+                          </p>
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              background: "#f1f5f9",
+                              padding: "4px 10px",
+                              borderRadius: "12px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              color: "#1e293b"
+                            }}
+                          >
+                            <User size={13} color="#6366f1" /> {assignedBaName}
+                          </span>
+                        </td>
+                        <td>
+                          {isSubmitted ? (
                             <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                background: "#f1f5f9",
-                                padding: "3px 8px",
-                                borderRadius: "12px",
-                                fontSize: "12px",
-                                fontWeight: "600"
-                              }}
+                              className="table-badge badge-approved"
+                              style={{ background: "#e0e7ff", color: "#4338ca", border: "1px solid #c7d2fe" }}
                             >
-                              <User size={12} color="#6366f1" /> BA: {rep.baName}
+                              ✓ Report Submitted
                             </span>
-                          </td>
-                          <td>
-                            <div style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a" }}>
-                              {rep.projectedRoi || "N/A"}
-                            </div>
-                            <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                              Cost: {rep.estimatedCost || "N/A"}
-                            </div>
-                          </td>
-                          <td>
+                          ) : (
                             <span
-                              className={`table-badge ${
-                                isPmAccepted
-                                  ? "badge-approved"
-                                  : isBaApproved
-                                  ? "badge-approved"
-                                  : "badge-review"
-                              }`}
-                              style={{
-                                background: isBaApproved ? "#e0e7ff" : undefined,
-                                color: isBaApproved ? "#4338ca" : undefined
-                              }}
+                              className="table-badge badge-review"
+                              style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a" }}
                             >
-                              {rep.status}
+                              ⏳ Pending Submission
                             </span>
-                          </td>
-                          <td>
+                          )}
+                        </td>
+                        <td>
+                          {isSubmitted ? (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -482,17 +349,315 @@ function BusinessAnalysis() {
                             >
                               View Report
                             </Button>
-                          </td>
-                        </tr>
-                      );
-                    })
+                          ) : (
+                            <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "600" }}>
+                              Awaiting BA
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : (
+        /* BUSINESS ANALYST ROLE VIEW: 2-Column Workspace */
+        <div className="screening-workspace-grid">
+          {/* LEFT COLUMN: Upload Analysis Report Form */}
+          <div className="screening-left-col">
+            <Card
+              title="1. Upload & Send Analysis Report to PM"
+              subtitle="Fill BA details, attach analysis document & dispatch to Project Manager"
+            >
+              <form onSubmit={handleSubmitReport} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Select Idea Dropdown */}
+                <div className="input-field-group">
+                  <label className="input-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span>Select Proposal / Idea to Analyze *</span>
+                    <span style={{ fontSize: "11px", color: "#6366f1", fontWeight: "700" }}>
+                      ✓ Feasibility Approved Only ({feasibleIdeas.length} Available)
+                    </span>
+                  </label>
+                  <select
+                    className="custom-input-elem"
+                    value={selectedIdeaId}
+                    onChange={(e) => handleIdeaSelect(e.target.value)}
+                    style={{ fontSize: "14px", fontWeight: "600" }}
+                    required
+                  >
+                    <option value="">-- Choose Proposal (Feasibility Passed) --</option>
+                    {feasibleIdeas.length === 0 ? (
+                      <option value="" disabled>
+                        -- No proposals currently passed Stage 2 Feasibility Review --
+                      </option>
+                    ) : (
+                      feasibleIdeas.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.title} [{item.category}] — Status: {item.status}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                {/* BA Name & Email */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <Input
+                    label="Business Analyst (BA) Name"
+                    placeholder="e.g. Ayushman Raj"
+                    icon={User}
+                    value={baName}
+                    onChange={(e) => setBaName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    label="BA Email Address"
+                    placeholder="e.g. ba@company.com"
+                    icon={Mail}
+                    value={baEmail}
+                    onChange={(e) => setBaEmail(e.target.value)}
+                  />
+                </div>
+
+                {/* Report Title */}
+                <Input
+                  label="Analysis Report Title"
+                  placeholder="e.g. Detailed Financial & Technical Feasibility Study"
+                  icon={FileText}
+                  value={reportTitle}
+                  onChange={(e) => setReportTitle(e.target.value)}
+                  required
+                />
+
+                {/* Financial Cost & ROI Projections */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <Input
+                    label="Estimated Implementation Cost"
+                    placeholder="e.g. $45,000 / INR 5,00,000"
+                    icon={DollarSign}
+                    value={estimatedCost}
+                    onChange={(e) => setEstimatedCost(e.target.value)}
+                  />
+                  <Input
+                    label="Projected Annual ROI / Value"
+                    placeholder="e.g. 320% ROI / $150k Annual Benefit"
+                    icon={TrendingUp}
+                    value={projectedRoi}
+                    onChange={(e) => setProjectedRoi(e.target.value)}
+                  />
+                </div>
+
+                {/* Executive Summary / Notes */}
+                <div className="input-field-group">
+                  <label className="input-label">Executive Summary & Commercial Analysis Notes *</label>
+                  <textarea
+                    className="custom-input-elem"
+                    rows={4}
+                    placeholder="Provide key insights, risk assessment, payback period, and strategic alignment notes for the PM..."
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    required
+                  ></textarea>
+                </div>
+
+                {/* Upload File Box */}
+                <div className="input-field-group">
+                  <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Paperclip size={14} /> Upload Analysis Report Document (PDF, DOCX, XLSX, Images)
+                  </label>
+
+                  {!reportFile ? (
+                    <div
+                      style={{
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        textAlign: "center",
+                        background: "#f8fafc",
+                        cursor: "pointer",
+                        transition: "border-color 0.2s"
+                      }}
+                      onClick={() => document.getElementById("baReportFileInput")?.click()}
+                    >
+                      <Upload size={28} color="#6366f1" style={{ marginBottom: "6px" }} />
+                      <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)" }}>
+                        Click to Browse or Drag & Drop Report File
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                        Supports PDF, DOCX, XLSX, CSV, PNG, JPG (Max 10MB)
+                      </div>
+                      <input
+                        id="baReportFileInput"
+                        type="file"
+                        style={{ display: "none" }}
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "#e0e7ff",
+                        border: "1px solid #c7d2fe",
+                        padding: "12px 16px",
+                        borderRadius: "10px"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <FileText size={22} color="#4f46e5" />
+                        <div>
+                          <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e1b4b" }}>
+                            {reportFile.fileName}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#4338ca" }}>
+                            {reportFile.fileSize}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReportFile(null)}
+                        style={{
+                          background: "#fee2e2",
+                          border: "none",
+                          color: "#ef4444",
+                          padding: "6px",
+                          borderRadius: "6px",
+                          cursor: "pointer"
+                        }}
+                        title="Remove file"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  icon={Send}
+                  disabled={isSubmitting}
+                  style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: "15px" }}
+                >
+                  {isSubmitting ? "Dispatching Report to PM..." : "Send Analysis Report to Project Manager (PM)"}
+                </Button>
+              </form>
+            </Card>
+          </div>
+
+          {/* RIGHT COLUMN: Submitted Analysis Reports Table */}
+          <div className="screening-right-col">
+            <Card
+              title={`2. Submitted Analysis Reports (${reports.length})`}
+              subtitle="Track reports dispatched to Project Manager & current approval status"
+            >
+              <div className="data-table-wrapper">
+                <table className="enterprise-table">
+                  <thead>
+                    <tr>
+                      <th>Proposal / Report Title</th>
+                      <th>Prepared & Approved By</th>
+                      <th>Financial ROI</th>
+                      <th>Current Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reports.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="empty-state-cell">
+                          <div className="empty-state-flex" style={{ padding: "28px 0" }}>
+                            <Inbox size={32} color="var(--text-light)" />
+                            <span className="empty-state-title">No Analysis Reports Uploaded Yet</span>
+                            <span className="empty-state-sub">Use the form on the left to upload & send an analysis report to PM.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      reports.map((rep) => {
+                        const isBaApproved = rep.status.includes("Approved by BA");
+                        const isPmAccepted = rep.status.includes("Accepted by PM") || rep.status.includes("Execution");
+
+                        return (
+                          <tr key={rep.id}>
+                            <td>
+                              <div style={{ fontWeight: "700", color: "var(--text-dark)" }}>
+                                {rep.reportTitle || rep.ideaTitle}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                                Idea: {rep.ideaTitle} • {rep.date}
+                              </div>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "#f1f5f9",
+                                  padding: "3px 8px",
+                                  borderRadius: "12px",
+                                  fontSize: "12px",
+                                  fontWeight: "600"
+                                }}
+                              >
+                                <User size={12} color="#6366f1" /> BA: {rep.baName}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a" }}>
+                                {rep.projectedRoi || "N/A"}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                                Cost: {rep.estimatedCost || "N/A"}
+                              </div>
+                            </td>
+                            <td>
+                              <span
+                                className={`table-badge ${
+                                  isPmAccepted
+                                    ? "badge-approved"
+                                    : isBaApproved
+                                    ? "badge-approved"
+                                    : "badge-review"
+                                }`}
+                                style={{
+                                  background: isBaApproved ? "#e0e7ff" : undefined,
+                                  color: isBaApproved ? "#4338ca" : undefined
+                                }}
+                              >
+                                {rep.status}
+                              </span>
+                            </td>
+                            <td>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                icon={Eye}
+                                onClick={() => setViewingReport(rep)}
+                              >
+                                View Report
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MODAL: View Full BA Analysis Report */}
       {viewingReport && (
