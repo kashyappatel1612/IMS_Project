@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Lightbulb,
@@ -14,12 +14,24 @@ import {
   BookOpen,
   FileBarChart,
   Settings,
-  ShieldCheck
+  ShieldCheck,
+  History,
+  Bell,
+  FileText,
+  ListTodo,
+  Folder,
+  Calendar,
+  CheckSquare,
+  Rocket,
+  UserCheck,
+  Users,
+  LogOut
 } from "lucide-react";
 import imsLogo from "../assets/ims-logo.jpg";
 
 function Sidebar({ isOpen }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [userRole, setUserRole] = useState("User");
 
   useEffect(() => {
@@ -36,8 +48,8 @@ function Sidebar({ isOpen }) {
     }
   }, [location]);
 
-  // Full Navigation Items List
-  const allNavItems = [
+  // Full Admin Navigation Items List
+  const adminNavItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
     { id: "feasibility-review", label: "Feasibility Review", icon: FileCheck, path: "/feasibility-review" },
@@ -47,7 +59,63 @@ function Sidebar({ isOpen }) {
     { id: "execution", label: "Execution", icon: PlayCircle, path: "/execution" },
     { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
     { id: "quality-assurance", label: "Quality Assurance", icon: ShieldCheck, path: "/quality-assurance" },
+    { id: "benefits-tracking", label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
     { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
+    { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
+  ];
+
+  // Dedicated Project Coordinator Navigation Menu Items
+  const pcNavItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { id: "allocate-roles", label: "Allocate Roles", icon: UserCheck, path: "/reviewer-allocation" },
+    { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
+    { id: "review-monitoring", label: "Review Monitoring", icon: ShieldCheck, path: "/feasibility-review" },
+    { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
+    { id: "estimation", label: "Estimation", icon: Calculator, path: "/estimation" },
+    { id: "project-creation", label: "Project Creation", icon: FolderKanban, path: "/projects" },
+    { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
+    { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
+    { id: "user-management", label: "User Management", icon: Users, path: "/user-management" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
+  ];
+
+  // Dedicated Reviewer Navigation Menu Items
+  const reviewerNavItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
+    { id: "feasibility-review", label: "Feasibility Review", icon: ShieldCheck, path: "/feasibility-review" },
+    { id: "review-history", label: "Review History", icon: History, path: "/review-history" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
+    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
+  ];
+
+  // Dedicated Business Analyst Navigation Menu Items
+  const baNavItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { id: "assigned-ideas", label: "Assigned Ideas", icon: Lightbulb, path: "/business-analysis" },
+    { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
+    { id: "brd-frd", label: "BRD / FRD Studio", icon: FileText, path: "/brd-frd" },
+    { id: "documents", label: "Documents", icon: Folder, path: "/documents" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
+    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
+  ];
+
+  // Dedicated Project Manager Navigation Menu Items
+  const pmNavItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { id: "my-projects", label: "My Projects", icon: FolderKanban, path: "/projects" },
+    { id: "sprint-planning", label: "Sprint Planning", icon: Calendar, path: "/sprint-planning" },
+    { id: "task-management", label: "Task Management", icon: CheckSquare, path: "/task-management" },
+    { id: "execution", label: "Execution", icon: PlayCircle, path: "/execution" },
+    { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
+    { id: "quality-assurance", label: "Quality Assurance", icon: ShieldCheck, path: "/quality-assurance" },
+    { id: "release-management", label: "Release Management", icon: Rocket, path: "/release-management" },
+    { id: "benefits-tracking", label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
+    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
     { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
   ];
@@ -62,36 +130,24 @@ function Sidebar({ isOpen }) {
 
   // Role-Specific Navigation Menu Logic
   const getMenuForRole = () => {
-    if (userRole === "Administrator" || userRole === "Project Coordinator") {
-      return allNavItems;
+    if (userRole === "Administrator") {
+      return adminNavItems;
     }
 
-    if (userRole === "Business Analyst") {
-      // HIDE Initial Screening & Feasibility Review
-      return allNavItems.filter(
-        (item) => item.id !== "initial-screening" && item.id !== "feasibility-review"
-      );
+    if (userRole === "Project Coordinator") {
+      return pcNavItems;
     }
 
     if (userRole === "Reviewer") {
-      // HIDE Initial Screening only
-      return allNavItems.filter((item) => item.id !== "initial-screening");
+      return reviewerNavItems;
+    }
+
+    if (userRole === "Business Analyst") {
+      return baNavItems;
     }
 
     if (userRole === "Project Manager") {
-      // HIDE everything above Projects (Initial Screening, Feasibility Review, Business Analysis, Estimation)
-      return allNavItems.filter((item) => {
-        if (item.id === "dashboard") return true;
-        if (
-          item.id === "initial-screening" ||
-          item.id === "feasibility-review" ||
-          item.id === "business-analysis" ||
-          item.id === "estimation"
-        ) {
-          return false;
-        }
-        return true; // Projects, Execution, Progress Tracking, Benefits Tracking, Knowledge Base, Reports, Settings
-      });
+      return pmNavItems;
     }
 
     // Default 'User' Role

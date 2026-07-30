@@ -65,3 +65,11 @@ class AnalysisReportStatusUpdateRequest(BaseModel):
     status: str
     pmNotes: Optional[str] = ""
 
+class EvaluatorCreateRequest(BaseModel):
+    name: str
+    email: str
+    role: str
+    domain: str
+    department: Optional[str] = ""
+
+

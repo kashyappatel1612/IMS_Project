@@ -73,10 +73,15 @@ function Login() {
       <div className="auth-card">
         {/* Brand Header */}
         <div className="auth-brand-header">
-          <img src={imsLogo} alt="IMS Group" className="auth-brand-logo" />
-          <div className="auth-brand-titles">
-            <h2>Sign In to Idea360</h2>
-            <p>IMS Group Innovation Portal</p>
+          <Link to="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: "700", color: "#6366f1", marginBottom: "8px" }}>
+            ← Back to Product Showcase
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <img src={imsLogo} alt="IMS Group" className="auth-brand-logo" />
+            <div className="auth-brand-titles">
+              <h2>Sign In to Idea360</h2>
+              <p>IMS Group Innovation Portal</p>
+            </div>
           </div>
         </div>
 

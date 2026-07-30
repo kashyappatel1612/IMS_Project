@@ -162,3 +162,27 @@ export async function patchAnalysisReportStatus(id, status, pmNotes = "") {
   }
 }
 
+// Evaluators API Calls
+export async function fetchEvaluators(domain = "", role = "") {
+  try {
+    const params = {};
+    if (domain) params.domain = domain;
+    if (role) params.role = role;
+    const res = await apiClient.get("/evaluators", { params });
+    return res.data;
+  } catch (err) {
+    console.warn("Backend API notice for evaluators, reading from local cache:", err.message);
+    return null;
+  }
+}
+
+export async function postEvaluator(evaluatorData) {
+  try {
+    const res = await apiClient.post("/evaluators", evaluatorData);
+    return res.data;
+  } catch (err) {
+    console.warn("Backend API notice for post evaluator:", err.message);
+    return null;
+  }
+}
+

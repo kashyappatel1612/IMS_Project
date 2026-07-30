@@ -374,6 +374,15 @@ def create_idea(req: schemas.IdeaCreateRequest, current_user: dict = Depends(get
 
 
 
+@app.delete("/api/ideas/clear-all")
+def clear_all_ideas():
+    try:
+        database.delete_all_ideas_from_db()
+        return {"message": "All saved ideas and analysis reports deleted successfully!"}
+    except Exception as err:
+        print("Clear Ideas Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to clear ideas.")
+
 @app.patch("/api/ideas/{idea_id}/status")
 def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest, current_user: dict = Depends(get_current_user)):
     try:
@@ -386,6 +395,19 @@ def update_idea_status(idea_id: int, req: schemas.IdeaStatusUpdateRequest, curre
     except Exception as err:
         print("Update Status Error:", err)
         raise HTTPException(status_code=500, detail="Failed to update status.")
+
+@app.patch("/api/ideas/{idea_id}/allocation")
+def update_idea_allocation(idea_id: int, payload: dict, current_user: dict = Depends(get_current_user)):
+    try:
+        updated = database.update_idea_allocation_in_db(idea_id, payload)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Idea not found.")
+        return {"message": "Idea allocation updated successfully!", "idea": updated}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Update Allocation Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to update allocation.")
 
 @app.get("/api/analysis-reports")
 def get_analysis_reports(current_user: dict = Depends(get_current_user)):
@@ -420,6 +442,32 @@ def update_analysis_report_status(report_id: int, req: schemas.AnalysisReportSta
     except Exception as err:
         print("Update Report Status Error:", err)
         raise HTTPException(status_code=500, detail="Failed to update report status.")
+
+@app.get("/api/evaluators")
+def get_evaluators(domain: Optional[str] = None, role: Optional[str] = None):
+    try:
+        return database.get_all_evaluators(domain=domain, role=role)
+    except Exception as err:
+        print("Get Evaluators Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch evaluators.")
+
+@app.post("/api/evaluators", status_code=status.HTTP_201_CREATED)
+def create_evaluator(req: schemas.EvaluatorCreateRequest, current_user: dict = Depends(get_current_user)):
+    if not req.name or not req.email or not req.role or not req.domain:
+        raise HTTPException(status_code=400, detail="Name, email, role, and domain are required.")
+
+    try:
+        saved = database.create_evaluator(
+            name=req.name.strip(),
+            email=req.email.strip().lower(),
+            role=req.role.strip(),
+            domain=req.domain.strip(),
+            department=req.department.strip() if req.department else ""
+        )
+        return {"message": "Domain Evaluator added successfully!", "evaluator": saved}
+    except Exception as err:
+        print("Create Evaluator Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to add domain evaluator.")
 
 if __name__ == "__main__":
     import uvicorn

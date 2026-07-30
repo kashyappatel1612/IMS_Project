@@ -98,6 +98,13 @@ def init_tables():
             cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS duplicity_score DOUBLE PRECISION DEFAULT 0.0;")
             cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS duplicity_status VARCHAR(100);")
             cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS matched_idea_id BIGINT;")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS assigned_reviewer VARCHAR(255);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS reviewer_deadline VARCHAR(100);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS assigned_ba VARCHAR(255);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS ba_deadline VARCHAR(100);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS assigned_pm VARCHAR(255);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS pm_deadline VARCHAR(100);")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN IF NOT EXISTS coordinator_notes TEXT;")
         except Exception:
             pass
 
@@ -118,10 +125,22 @@ def init_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS evaluators (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                role VARCHAR(100) NOT NULL,
+                domain VARCHAR(100) NOT NULL,
+                department VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
         conn.commit()
         cursor.close()
         conn.close()
-        print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports) Verified!")
+        print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports, evaluators) Verified!")
     else:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -206,6 +225,16 @@ def init_tables():
             cursor.execute("ALTER TABLE ideas ADD COLUMN matched_idea_id INTEGER")
         except Exception:
             pass
+        try:
+            cursor.execute("ALTER TABLE ideas ADD COLUMN assigned_reviewer TEXT")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN reviewer_deadline TEXT")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN assigned_ba TEXT")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN ba_deadline TEXT")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN assigned_pm TEXT")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN pm_deadline TEXT")
+            cursor.execute("ALTER TABLE ideas ADD COLUMN coordinator_notes TEXT")
+        except Exception:
+            pass
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS analysis_reports (
@@ -224,9 +253,211 @@ def init_tables():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS evaluators (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                role TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                department TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
         conn.close()
-        print("[OK] SQLite Tables (users, otps, ideas, analysis_reports) Verified!")
+        print("[OK] SQLite Tables (users, otps, ideas, analysis_reports, evaluators) Verified!")
+
+    # Auto seed master evaluators & initial sample ideas
+    seed_evaluators()
+    seed_initial_ideas()
+
+def seed_initial_ideas():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if ideas exist
+    cursor.execute("SELECT COUNT(*) FROM ideas;")
+    cnt = cursor.fetchone()[0]
+    if cnt > 0:
+        cursor.close() if IS_POSTGRES else None
+        conn.close()
+        return
+
+    sample_ideas = [
+        {
+            "id": 1,
+            "title": "AI-Driven Automated Invoice & Receipt Reconciliation",
+            "category": "Finance",
+            "functional_area": "Finance & Accounts",
+            "target_user": "Finance Team",
+            "author": "Ayushman Raj",
+            "authorEmail": "ayushman@imsgroup.com",
+            "problem_statement": "Manual invoice matching causes vendor payment delays and human reconciliation errors.",
+            "description": "OCR + Machine Learning based document parsing pipeline with SAP ERP integration.",
+            "proposed_solution": "Automated matching algorithm for POs and vendor invoices with 99.4% accuracy.",
+            "expected_benefits": "75% reduction in invoice processing SLA and 100% audit trail compliance.",
+            "status": "Passed Initial Screening",
+            "evaluator_notes": "Passed 100-point rubric assessment by Finance Reviewer."
+        },
+        {
+            "id": 2,
+            "title": "Smart Retail Inventory & Shelf Monitoring System",
+            "category": "Retail",
+            "functional_area": "Supply Chain & Retail Stores",
+            "target_user": "Store Managers",
+            "author": "Priya Sharma",
+            "authorEmail": "priya.s@imsgroup.com",
+            "problem_statement": "Out-of-stock items lead to revenue loss during peak shopping hours.",
+            "description": "IoT camera sensors & real-time stock alert dashboard for retail store managers.",
+            "proposed_solution": "Automated restocking alerts sent to warehouse management system.",
+            "expected_benefits": "Increase store sales by 12% and reduce stockout duration.",
+            "status": "Approved by BA: Vikram Sethi",
+            "evaluator_notes": "BRD/FRD completed and forwarded to PM for execution onboarding."
+        }
+    ]
+
+    for item in sample_ideas:
+        if IS_POSTGRES:
+            cursor.execute(
+                """INSERT INTO ideas (id, title, category, functional_area, target_user, author, author_email, problem_statement, description, proposed_solution, expected_benefits, expected_outcome, status, evaluator_notes)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    item["id"], item["title"], item["category"], item["functional_area"], item["target_user"],
+                    item["author"], item["authorEmail"], item["problem_statement"], item["description"],
+                    item["proposed_solution"], item["expected_benefits"], item["expected_benefits"],
+                    item["status"], item["evaluator_notes"]
+                )
+            )
+        else:
+            cursor.execute(
+                """INSERT INTO ideas (id, title, category, functional_area, target_user, author, author_email, problem_statement, description, proposed_solution, expected_benefits, expected_outcome, status, evaluator_notes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    item["id"], item["title"], item["category"], item["functional_area"], item["target_user"],
+                    item["author"], item["authorEmail"], item["problem_statement"], item["description"],
+                    item["proposed_solution"], item["expected_benefits"], item["expected_benefits"],
+                    item["status"], item["evaluator_notes"]
+                )
+            )
+    conn.commit()
+    cursor.close() if IS_POSTGRES else None
+    conn.close()
+    print("[OK] Sample ideas restored successfully!")
+
+def seed_evaluators():
+    DEFAULT_EVALUATORS = [
+        {"name": "Dr. Ananya Sharma", "email": "ananya.hr@imsgroup.com", "role": "Reviewer", "domain": "HR", "department": "Human Resources & Talent"},
+        {"name": "Vikram Sethi", "email": "vikram.hrba@imsgroup.com", "role": "Business Analyst", "domain": "HR", "department": "HR Business Operations"},
+        {"name": "Priya Nair", "email": "priya.hrpm@imsgroup.com", "role": "Project Manager", "domain": "HR", "department": "People Systems PMO"},
+
+        {"name": "Rohan Gupta", "email": "rohan.ecom@imsgroup.com", "role": "Reviewer", "domain": "E-Commerce", "department": "Digital Platforms"},
+        {"name": "Neha Verma", "email": "neha.ecomba@imsgroup.com", "role": "Business Analyst", "domain": "E-Commerce", "department": "E-Commerce Analytics"},
+        {"name": "Amitav Roy", "email": "amitav.ecompm@imsgroup.com", "role": "Project Manager", "domain": "E-Commerce", "department": "E-Commerce PMO"},
+
+        {"name": "Siddharth Malhotra", "email": "siddharth.retail@imsgroup.com", "role": "Reviewer", "domain": "Retail", "department": "Retail Operations"},
+        {"name": "Kavita Reddy", "email": "kavita.retailba@imsgroup.com", "role": "Business Analyst", "domain": "Retail", "department": "Retail Systems"},
+        {"name": "Rajesh Kapoor", "email": "rajesh.retailpm@imsgroup.com", "role": "Project Manager", "domain": "Retail", "department": "Store Innovation PMO"},
+
+        {"name": "Meera Joshi", "email": "meera.fin@imsgroup.com", "role": "Reviewer", "domain": "Finance", "department": "Corporate Finance"},
+        {"name": "Sanjay Mehta", "email": "sanjay.finba@imsgroup.com", "role": "Business Analyst", "domain": "Finance", "department": "FinTech & Payments"},
+        {"name": "Tarun Khanna", "email": "tarun.finpm@imsgroup.com", "role": "Project Manager", "domain": "Finance", "department": "Financial Systems PMO"},
+
+        {"name": "Dr. Sunita Patel", "email": "sunita.health@imsgroup.com", "role": "Reviewer", "domain": "Healthcare", "department": "Health & Safety"},
+        {"name": "Arjun Menon", "email": "arjun.healthba@imsgroup.com", "role": "Business Analyst", "domain": "Healthcare", "department": "Clinical Ops BA"},
+        {"name": "Deepak Rao", "email": "deepak.healthpm@imsgroup.com", "role": "Project Manager", "domain": "Healthcare", "department": "Health Tech PMO"},
+
+        {"name": "Expert Reviewer", "email": "reviewer@imsgroup.com", "role": "Reviewer", "domain": "IT", "department": "Enterprise IT Architecture"},
+        {"name": "Business Analyst Lead", "email": "ba@imsgroup.com", "role": "Business Analyst", "domain": "IT", "department": "IT Strategy & BA"},
+        {"name": "Project Manager Lead", "email": "pm@imsgroup.com", "role": "Project Manager", "domain": "IT", "department": "Enterprise PMO"}
+    ]
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if IS_POSTGRES:
+            cursor.execute("SELECT COUNT(*) FROM evaluators")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                for item in DEFAULT_EVALUATORS:
+                    cursor.execute(
+                        "INSERT INTO evaluators (name, email, role, domain, department) VALUES (%s, %s, %s, %s, %s)",
+                        (item["name"], item["email"], item["role"], item["domain"], item["department"])
+                    )
+                conn.commit()
+        else:
+            cursor.execute("SELECT COUNT(*) FROM evaluators")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                for item in DEFAULT_EVALUATORS:
+                    cursor.execute(
+                        "INSERT INTO evaluators (name, email, role, domain, department) VALUES (?, ?, ?, ?, ?)",
+                        (item["name"], item["email"], item["role"], item["domain"], item["department"])
+                    )
+                conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as err:
+        print("[DATABASE NOTICE] Evaluator Seeding Notice:", err)
+
+def get_all_evaluators(domain=None, role=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM evaluators"
+    params = []
+    conditions = []
+
+    if domain:
+        conditions.append("LOWER(domain) = LOWER(%s)" if IS_POSTGRES else "LOWER(domain) = LOWER(?)")
+        params.append(domain)
+    if role:
+        conditions.append("LOWER(role) = LOWER(%s)" if IS_POSTGRES else "LOWER(role) = LOWER(?)")
+        params.append(role)
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY domain ASC, role ASC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    evaluators = []
+    if rows:
+        for r in rows:
+            evaluators.append(_row_to_dict(r, cursor.description))
+
+    cursor.close()
+    conn.close()
+    return evaluators
+
+def create_evaluator(name, email, role, domain, department=""):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if IS_POSTGRES:
+        cursor.execute(
+            "INSERT INTO evaluators (name, email, role, domain, department) VALUES (%s, %s, %s, %s, %s) RETURNING *",
+            (name, email, role, domain, department)
+        )
+        row = cursor.fetchone()
+        eval_dict = _row_to_dict(row, cursor.description)
+        conn.commit()
+    else:
+        cursor.execute(
+            "INSERT INTO evaluators (name, email, role, domain, department) VALUES (?, ?, ?, ?, ?)",
+            (name, email, role, domain, department)
+        )
+        new_id = cursor.lastrowid
+        conn.commit()
+        cursor.execute("SELECT * FROM evaluators WHERE id = ?", (new_id,))
+        row = cursor.fetchone()
+        eval_dict = _row_to_dict(row, cursor.description)
+
+    cursor.close()
+    conn.close()
+    return eval_dict
 
 # Initialize on module load
 init_tables()
@@ -481,7 +712,14 @@ def get_all_ideas_from_db():
             "embeddingVector": emb_val,
             "duplicityScore": float(r.get("duplicity_score") or 0.0),
             "duplicityStatus": r.get("duplicity_status") or "",
-            "matchedIdeaId": r.get("matched_idea_id")
+            "matchedIdeaId": r.get("matched_idea_id"),
+            "assignedReviewer": r.get("assigned_reviewer") or "",
+            "reviewerDeadline": r.get("reviewer_deadline") or "",
+            "assignedBA": r.get("assigned_ba") or "",
+            "baDeadline": r.get("ba_deadline") or "",
+            "assignedPM": r.get("assigned_pm") or "",
+            "pmDeadline": r.get("pm_deadline") or "",
+            "coordinatorNotes": r.get("coordinator_notes") or ""
         })
         
     return ideas_list
@@ -658,6 +896,60 @@ def update_idea_duplicity_in_db(idea_id: int, score: float, duplicity_status: st
         conn.commit()
         conn.close()
 
+def update_idea_allocation_in_db(idea_id: int, allocation_data: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    assigned_reviewer = allocation_data.get("assignedReviewer", "")
+    reviewer_deadline = allocation_data.get("reviewerDeadline", "")
+    assigned_ba = allocation_data.get("assignedBA", "")
+    ba_deadline = allocation_data.get("baDeadline", "")
+    assigned_pm = allocation_data.get("assignedPM", "")
+    pm_deadline = allocation_data.get("pmDeadline", "")
+    coordinator_notes = allocation_data.get("coordinatorNotes", "")
+    status = allocation_data.get("status", "Assigned by Project Coordinator")
+
+    if IS_POSTGRES:
+        cursor.execute(
+            """UPDATE ideas 
+               SET assigned_reviewer = %s, reviewer_deadline = %s, assigned_ba = %s, ba_deadline = %s, assigned_pm = %s, pm_deadline = %s, coordinator_notes = %s, status = %s
+               WHERE id = %s RETURNING *""",
+            (assigned_reviewer, reviewer_deadline, assigned_ba, ba_deadline, assigned_pm, pm_deadline, coordinator_notes, status, idea_id)
+        )
+        row = cursor.fetchone()
+        conn.commit()
+        r = _row_to_dict(row, cursor.description) if row else None
+        cursor.close()
+        conn.close()
+    else:
+        cursor.execute(
+            """UPDATE ideas 
+               SET assigned_reviewer = ?, reviewer_deadline = ?, assigned_ba = ?, ba_deadline = ?, assigned_pm = ?, pm_deadline = ?, coordinator_notes = ?, status = ?
+               WHERE id = ?""",
+            (assigned_reviewer, reviewer_deadline, assigned_ba, ba_deadline, assigned_pm, pm_deadline, coordinator_notes, status, idea_id)
+        )
+        conn.commit()
+        cursor.execute("SELECT * FROM ideas WHERE id = ?", (idea_id,))
+        row = cursor.fetchone()
+        r = dict(row) if row else None
+        conn.close()
+
+    if r:
+        return {
+            "id": int(r["id"]),
+            "title": r["title"],
+            "category": r["category"],
+            "assignedReviewer": r.get("assigned_reviewer") or "",
+            "reviewerDeadline": r.get("reviewer_deadline") or "",
+            "assignedBA": r.get("assigned_ba") or "",
+            "baDeadline": r.get("ba_deadline") or "",
+            "assignedPM": r.get("assigned_pm") or "",
+            "pmDeadline": r.get("pm_deadline") or "",
+            "coordinatorNotes": r.get("coordinator_notes") or "",
+            "status": r["status"]
+        }
+    return None
+
 def update_idea_status_in_db(idea_id: int, status: str, evaluator_notes: str = ""):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -714,6 +1006,22 @@ def update_idea_status_in_db(idea_id: int, status: str, evaluator_notes: str = "
         "evaluatorNotes": r.get("evaluator_notes") or "",
         "date": datetime.now().strftime("%b %d, %Y")
     }
+
+def delete_all_ideas_from_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if IS_POSTGRES:
+        cursor.execute("DELETE FROM ideas;")
+        cursor.execute("DELETE FROM analysis_reports;")
+        conn.commit()
+        cursor.close()
+        conn.close()
+    else:
+        cursor.execute("DELETE FROM ideas;")
+        cursor.execute("DELETE FROM analysis_reports;")
+        conn.commit()
+        conn.close()
+    return True
 
 # ==========================================
 # ANALYSIS REPORT DATABASE HELPERS

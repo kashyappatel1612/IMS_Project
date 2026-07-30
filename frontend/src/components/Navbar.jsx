@@ -25,11 +25,13 @@ import {
   BookOpen,
   LayoutDashboard,
   Filter,
-  UserCheck
+  UserCheck,
+  Bell
 } from "lucide-react";
 import imsLogo from "../assets/ims-logo.jpg";
 import { getLoginHistory, switchAccount } from "../utils/authHistory";
 import { getSubmittedIdeas } from "../utils/ideaStorage";
+import { getUnreadCount } from "../utils/notificationStorage";
 
 const NAV_PAGES = [
   { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -336,7 +338,47 @@ function Navbar({ onToggleSidebar }) {
         </div>
       </div>
 
-      <div className="navbar-right">
+      <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {/* Real-time Notifications Bell Badge Button */}
+        <div
+          onClick={() => navigate("/notifications")}
+          style={{
+            position: "relative",
+            cursor: "pointer",
+            padding: "8px",
+            borderRadius: "50%",
+            background: "#f1f5f9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "all 0.2s ease"
+          }}
+          title="Notification Center"
+        >
+          <Bell size={18} color="#475569" />
+          {getUnreadCount(user.role, user.email) > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-2px",
+                right: "-2px",
+                background: "#dc2626",
+                color: "#ffffff",
+                fontSize: "10px",
+                fontWeight: "800",
+                width: "18px",
+                height: "18px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              {getUnreadCount(user.role, user.email)}
+            </span>
+          )}
+        </div>
+
         <div className="profile-dropdown-wrapper" ref={dropdownRef}>
           <div
             className="user-profile-pill"
@@ -354,22 +396,22 @@ function Navbar({ onToggleSidebar }) {
           </div>
 
           {dropdownOpen && (
-            <div className="profile-menu-popover" style={{ width: "310px", padding: "12px" }}>
-              <div className="popover-header" style={{ marginBottom: "10px" }}>
-                <span className="user-name" style={{ display: "block" }}>{user.username}</span>
-                <span className="user-role">{user.role}</span>
+            <div className="profile-menu-popover" style={{ width: "290px", padding: "10px" }}>
+              <div className="popover-header" style={{ marginBottom: "6px", paddingBottom: "6px", borderBottom: "1px solid #f1f5f9" }}>
+                <span className="user-name" style={{ display: "block", fontWeight: "800", fontSize: "14px", color: "#1e293b" }}>{user.username}</span>
+                <span className="user-role" style={{ fontSize: "11px", color: "#6366f1", fontWeight: "700" }}>{user.role}</span>
               </div>
 
-              {/* 6 ROLES QUICK SWITCHER WIDGET */}
-              <div style={{ borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9", padding: "10px 0", margin: "10px 0", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", marginBottom: "8px", padding: "0 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {/* COMPACT 2-COLUMN 6 ROLES QUICK SWITCHER */}
+              <div style={{ borderBottom: "1px solid #f1f5f9", padding: "6px 0", marginBottom: "6px", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "10px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", marginBottom: "4px", padding: "0 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                    <History size={13} color="var(--primary)" /> 6 Roles Quick Switcher
+                    <History size={11} color="var(--primary)" /> Role Switcher
                   </span>
-                  <span style={{ fontSize: "10px", background: "#e0e7ff", color: "#4f46e5", padding: "1px 6px", borderRadius: "8px" }}>Dev Mode</span>
+                  <span style={{ fontSize: "9px", background: "#e0e7ff", color: "#4f46e5", padding: "1px 5px", borderRadius: "6px", fontWeight: "800" }}>Dev Mode</span>
                 </div>
 
-                <div style={{ padding: "0 10px" }}>
+                <div style={{ padding: "0 6px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
                   {loginHistory.map((acc, idx) => {
                     const isActive = acc.role === user.role;
                     const RoleIcon = getRoleIcon(acc.role);
@@ -380,30 +422,19 @@ function Navbar({ onToggleSidebar }) {
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "6px 10px",
-                          borderRadius: "6px",
+                          gap: "6px",
+                          padding: "4px 6px",
+                          borderRadius: "4px",
                           cursor: "pointer",
-                          marginBottom: "5px",
                           background: isActive ? "#e0e7ff" : "#ffffff",
                           border: isActive ? "1.5px solid #6366f1" : "1px solid #cbd5e1"
                         }}
                         title={`Quick Switch to ${acc.role}`}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <RoleIcon size={14} color={isActive ? "#4f46e5" : "#64748b"} />
-                          <div style={{ display: "flex", flexDirection: "column" }}>
-                            <span style={{ fontSize: "12px", fontWeight: "700", color: "#1e293b" }}>{acc.role}</span>
-                            <span style={{ fontSize: "10px", color: "#64748b" }}>{acc.email}</span>
-                          </div>
-                        </div>
-                        {isActive ? (
-                          <span style={{ fontSize: "10px", color: "#16a34a", fontWeight: "800", background: "#dcfce7", padding: "2px 6px", borderRadius: "6px" }}>Active</span>
-                        ) : (
-                          <span style={{ fontSize: "10px", color: "#6366f1", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "2px", background: "#f1f5f9", padding: "2px 6px", borderRadius: "6px" }}>
-                            <RefreshCw size={10} /> Switch
-                          </span>
-                        )}
+                        <RoleIcon size={12} color={isActive ? "#4f46e5" : "#64748b"} />
+                        <span style={{ fontSize: "11px", fontWeight: "700", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {acc.role}
+                        </span>
                       </div>
                     );
                   })}
@@ -411,19 +442,38 @@ function Navbar({ onToggleSidebar }) {
               </div>
 
               <button className="popover-item" onClick={() => { setDropdownOpen(false); navigate("/settings"); }}>
-                <User size={16} />
+                <User size={15} />
                 <span>My Profile</span>
               </button>
 
               <button className="popover-item" onClick={() => { setDropdownOpen(false); navigate("/settings"); }}>
-                <Settings size={16} />
+                <Settings size={15} />
                 <span>Account Settings</span>
               </button>
 
-              <button className="popover-item danger-item" onClick={handleLogout}>
-                <LogOut size={16} />
-                <span>Sign Out</span>
-              </button>
+              <div style={{ borderTop: "1px solid #e2e8f0", marginTop: "6px", paddingTop: "6px" }}>
+                <button
+                  className="popover-item danger-item"
+                  onClick={handleLogout}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "#dc2626",
+                    background: "#fee2e2",
+                    padding: "7px 10px",
+                    borderRadius: "6px",
+                    fontWeight: "700",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    border: "1px solid #fecaca"
+                  }}
+                >
+                  <LogOut size={15} color="#dc2626" />
+                  <span>Log Out / Sign Out</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

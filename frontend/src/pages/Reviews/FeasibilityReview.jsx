@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Paperclip,
   FileText,
-  Download,
   Building2,
   User,
   Calendar,
@@ -22,691 +21,662 @@ import {
   Inbox,
   Check,
   X,
-  RefreshCw
+  HelpCircle,
+  Shield
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
 import { getSubmittedIdeas, updateIdeaStatus } from "../../utils/ideaStorage";
 
+// Helper Component for Yes/No Radio Buttons (Reviewers Only)
+const RadioYesNo = ({ label, value, onChange }) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "8px 12px",
+      background: "#f8fafc",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0"
+    }}
+  >
+    <span style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>{label}</span>
+    <div style={{ display: "flex", gap: "14px" }}>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontWeight: "700",
+          color: value === "Yes" ? "#16a34a" : "#64748b"
+        }}
+      >
+        <input
+          type="radio"
+          name={label.replace(/\s+/g, "_")}
+          value="Yes"
+          checked={value === "Yes"}
+          onChange={() => onChange("Yes")}
+        />
+        Yes
+      </label>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontWeight: "700",
+          color: value === "No" ? "#dc2626" : "#64748b"
+        }}
+      >
+        <input
+          type="radio"
+          name={label.replace(/\s+/g, "_")}
+          value="No"
+          checked={value === "No"}
+          onChange={() => onChange("No")}
+        />
+        No
+      </label>
+    </div>
+  </div>
+);
+
+// Helper Component for Low / Medium / High Selector (Reviewers Only)
+const RadioLevel = ({ label, value, onChange, options = ["Low", "Medium", "High"] }) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "8px 12px",
+      background: "#f8fafc",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0"
+    }}
+  >
+    <span style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>{label}</span>
+    <div style={{ display: "flex", gap: "10px" }}>
+      {options.map((opt) => (
+        <label
+          key={opt}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            cursor: "pointer",
+            fontSize: "12px",
+            fontWeight: "700",
+            color: value === opt ? "#4f46e5" : "#64748b"
+          }}
+        >
+          <input
+            type="radio"
+            name={label.replace(/\s+/g, "_")}
+            value={opt}
+            checked={value === opt}
+            onChange={() => onChange(opt)}
+          />
+          {opt}
+        </label>
+      ))}
+    </div>
+  </div>
+);
+
 function FeasibilityReview() {
   const [ideas, setIdeas] = useState([]);
   const [selectedIdeaId, setSelectedIdeaId] = useState(null);
-  const [activeTab, setActiveTab] = useState("technical");
-  const [filterMode, setFilterMode] = useState("all");
+  const [activeTab, setActiveTab] = useState("business"); // 'business' | 'functional' | 'technical'
+  const [userRole, setUserRole] = useState("User");
 
-  // Technical Review State
-  const [techReviewer, setTechReviewer] = useState("Dr. Rahul Sharma (Chief Architect)");
-  const [techFeasibility, setTechFeasibility] = useState("High Feasibility");
-  const [techStackFit, setTechStackFit] = useState("Compatible");
-  const [techSecurityRisk, setTechSecurityRisk] = useState("Low Risk");
-  const [techStatus, setTechStatus] = useState("Approved"); // 'Approved' | 'Rejected'
-  const [techRemarks, setTechRemarks] = useState("");
+  // SECTION A: BUSINESS REVIEW STATE (Reviewer: Business Head)
+  const [bizReviewer, setBizReviewer] = useState("Amit Kapoor (Head of Business Strategy)");
+  const [bizNeed, setBizNeed] = useState("Yes");
+  const [bizRoi, setBizRoi] = useState("Yes");
+  const [bizMarketOpp, setBizMarketOpp] = useState("Yes");
+  const [bizCompAdvantage, setBizCompAdvantage] = useState("Yes");
+  const [bizStrategicAlignment, setBizStrategicAlignment] = useState("Yes");
+  const [bizCustomerDemand, setBizCustomerDemand] = useState("Yes");
+  const [bizRevenuePotential, setBizRevenuePotential] = useState("Yes");
+  const [bizPriorityScore, setBizPriorityScore] = useState("High");
+  const [bizComments, setBizComments] = useState("");
+  const [bizRecommendation, setBizRecommendation] = useState("Approve"); // 'Approve' | 'Reject' | 'Clarify'
 
-  // Functional Review State
-  const [functionalReviewer, setFunctionalReviewer] = useState("Priya Mehta (VP Operations)");
-  const [functionalFit, setFunctionalFit] = useState("Seamless Fit");
-  const [userAdoption, setUserAdoption] = useState("High Adoption");
-  const [processComplexity, setProcessComplexity] = useState("Low Complexity");
-  const [functionalStatus, setFunctionalStatus] = useState("Approved"); // 'Approved' | 'Rejected'
-  const [functionalRemarks, setFunctionalRemarks] = useState("");
+  // SECTION B: FUNCTIONAL REVIEW STATE (Reviewer: Business Analyst)
+  const [funcReviewer, setFuncReviewer] = useState("Priya Mehta (Lead Business Analyst)");
+  const [funcReqClear, setFuncReqClear] = useState("Yes");
+  const [funcProcessDefined, setFuncProcessDefined] = useState("Yes");
+  const [funcUsersIdentified, setFuncUsersIdentified] = useState("Yes");
+  const [funcWorkflowComplete, setFuncWorkflowComplete] = useState("Yes");
+  const [funcComplianceConsidered, setFuncComplianceConsidered] = useState("Yes");
+  const [funcDependencies, setFuncDependencies] = useState("No");
+  const [funcIntegrationRequired, setFuncIntegrationRequired] = useState("Yes");
+  const [funcGapAnalysis, setFuncGapAnalysis] = useState("Yes");
+  const [funcComplexity, setFuncComplexity] = useState("Medium");
+  const [funcComments, setFuncComments] = useState("");
+  const [funcRecommendation, setFuncRecommendation] = useState("Approve"); // 'Approve' | 'Reject' | 'Clarify'
 
-  // Business Review State
-  const [businessReviewer, setBusinessReviewer] = useState("Amit Kapoor (Head of Strategy)");
-  const [financialViability, setFinancialViability] = useState("High ROI");
-  const [strategicPriority, setStrategicPriority] = useState("High Priority");
-  const [timeToMarket, setTimeToMarket] = useState("3 - 6 Months");
-  const [businessStatus, setBusinessStatus] = useState("Approved"); // 'Approved' | 'Rejected'
-  const [businessRemarks, setBusinessRemarks] = useState("");
+  // SECTION C: TECHNICAL REVIEW STATE (Reviewer: Technical Architect)
+  const [techReviewer, setTechReviewer] = useState("Dr. Rahul Sharma (Chief Technical Architect)");
+  const [techFit, setTechFit] = useState("Yes");
+  const [techPlatformReuse, setTechPlatformReuse] = useState("Yes");
+  const [techSecurity, setTechSecurity] = useState("Yes");
+  const [techPerformance, setTechPerformance] = useState("Yes");
+  const [techScalability, setTechScalability] = useState("Yes");
+  const [techCloudReadiness, setTechCloudReadiness] = useState("Yes");
+  const [techIntegrationComplexity, setTechIntegrationComplexity] = useState("Low");
+  const [techApiAvailability, setTechApiAvailability] = useState("Yes");
+  const [techInfraImpact, setTechInfraImpact] = useState("Yes");
+  const [techRisks, setTechRisks] = useState("Low");
+  const [techEstComplexity, setTechEstComplexity] = useState("Medium");
+  const [techComments, setTechComments] = useState("");
+  const [techRecommendation, setTechRecommendation] = useState("Approve"); // 'Approve' | 'Reject' | 'Clarify'
 
   useEffect(() => {
+    const savedUserStr = localStorage.getItem("currentUser");
+    if (savedUserStr) {
+      try {
+        const savedUser = JSON.parse(savedUserStr);
+        if (savedUser.role) setUserRole(savedUser.role);
+      } catch (err) {}
+    }
+
     const list = getSubmittedIdeas();
     setIdeas(list);
-    const eligible = list.filter(
-      (i) => i.status.includes("Passed Initial Screening") || i.status.includes("Sent") || i.status.includes("Feasibility") || i.status.includes("Not ")
-    );
-    if (eligible.length > 0) {
-      setSelectedIdeaId(eligible[0].id);
-    } else if (list.length > 0) {
+    if (list.length > 0) {
       setSelectedIdeaId(list[0].id);
     }
   }, []);
 
-  const passedInitialScreeningIdeas = ideas.filter(
-    (i) =>
-      i.status.includes("Passed Initial Screening") ||
-      i.status.includes("Sent") ||
-      i.status.includes("Feasibility") ||
-      i.status.includes("Not ")
-  );
+  const isReviewer = userRole === "Reviewer";
+  const selectedIdea = ideas.find((i) => String(i.id) === String(selectedIdeaId)) || ideas[0] || null;
 
-  const displayedIdeas = (passedInitialScreeningIdeas.length > 0 ? passedInitialScreeningIdeas : ideas).filter((item) => {
-    if (filterMode === "Feasible") return !item.status.includes("Not") && !item.status.includes("Rejected");
-    if (filterMode === "Approved") return item.status.includes("Feasibility Approved") || item.status.includes("Business Analysis");
-    if (filterMode === "Rejected") return item.status.includes("Not") || item.status.includes("Rejected");
-    return true; // 'all'
-  });
+  // OVERALL RULE: IF ANY REJECTED => OVERALL REJECTED. ACCEPTED ONLY WHEN ALL 3 ARE APPROVED!
+  const isBizApproved = bizRecommendation === "Approve";
+  const isFuncApproved = funcRecommendation === "Approve";
+  const isTechApproved = techRecommendation === "Approve";
 
-  const selectedIdea = ideas.find((i) => String(i.id) === String(selectedIdeaId)) || displayedIdeas[0] || null;
+  const isAnyRejected = bizRecommendation === "Reject" || funcRecommendation === "Reject" || techRecommendation === "Reject";
+  const allThreeApproved = isBizApproved && isFuncApproved && isTechApproved;
 
-  // Check if ALL 3 reviews are accepted
-  const allThreeApproved = techStatus === "Approved" && functionalStatus === "Approved" && businessStatus === "Approved";
-
-  // Determine specific rejection reason
-  let rejectionReason = "";
-  if (techStatus === "Rejected") rejectionReason = "Not Technically Feasible";
-  else if (functionalStatus === "Rejected") rejectionReason = "Not Functionally Feasible";
-  else if (businessStatus === "Rejected") rejectionReason = "Not Business Feasible";
-
-  // Accept Action Handler
-  const handleDirectAcceptFeasibility = () => {
+  const handleFinalSubmitReview = (finalDecision) => {
     if (!selectedIdea) return;
-    if (!allThreeApproved) {
-      alert(`Cannot Approve Feasibility! Reason: ${rejectionReason}. All 3 reviews must be accepted.`);
+    if (!isReviewer) {
+      alert("Only assigned Reviewers can submit Feasibility Review!");
       return;
     }
-    const notes = `Tech Reviewer: ${techReviewer} (Accepted) | Functional Reviewer: ${functionalReviewer} (Accepted) | Business Reviewer: ${businessReviewer} (Accepted)`;
-    const updated = updateIdeaStatus(selectedIdea.id, "Feasibility Approved", notes);
-    setIdeas(updated);
-    alert(`All 3 Reviews Approved! Proposal "${selectedIdea.title}" is FEASIBILITY APPROVED and forwarded to Business Analysis stage.`);
+
+    if (finalDecision === "Approve") {
+      if (!allThreeApproved) {
+        alert("Cannot approve proposal! All 3 Parallel Reviews (Business, Functional, Technical) MUST be Approved.");
+        return;
+      }
+
+      const newStatus = "Feasibility Approved";
+      const notes = `Business Review (${bizReviewer}): Approved. Functional Review (${funcReviewer}): Approved. Technical Review (${techReviewer}): Approved. Overall Status: Feasibility Approved & Sent to BA Pipeline.`;
+
+      updateIdeaStatus(selectedIdea.id, newStatus, notes);
+      setIdeas(getSubmittedIdeas());
+      alert(`Proposal "${selectedIdea.title}" Feasibility APPROVED & forwarded to Stage 4 Business Analysis!`);
+    } else {
+      let rejectionCause = [];
+      if (bizRecommendation === "Reject") rejectionCause.push("Not Business Feasible");
+      if (funcRecommendation === "Reject") rejectionCause.push("Not Functionally Feasible");
+      if (techRecommendation === "Reject") rejectionCause.push("Not Technically Feasible");
+
+      const newStatus = `Not Feasible (${rejectionCause.join(", ") || "Rejected"})`;
+      const notes = `Feasibility Rejected. Causes: ${rejectionCause.join("; ")}. Business Comments: ${bizComments || "N/A"}. Functional Comments: ${funcComments || "N/A"}. Tech Comments: ${techComments || "N/A"}.`;
+
+      updateIdeaStatus(selectedIdea.id, newStatus, notes);
+      setIdeas(getSubmittedIdeas());
+      alert(`Proposal "${selectedIdea.title}" marked as NON-FEASIBLE.`);
+    }
   };
 
-  // Reject Action Handler
-  const handleDirectRejectFeasibility = () => {
-    if (!selectedIdea) return;
-    const notes = `Tech Reviewer: ${techReviewer} (${techStatus}) | Functional Reviewer: ${functionalReviewer} (${functionalStatus}) | Business Reviewer: ${businessReviewer} (${businessStatus})`;
-    const updated = updateIdeaStatus(selectedIdea.id, rejectionReason || "Not Technically Feasible", notes);
-    setIdeas(updated);
-    alert(`Proposal "${selectedIdea.title}" marked as REJECTED: ${rejectionReason || "Not Technically Feasible"}. Status published to All Dashboards.`);
-  };
-
-  const isPassed = selectedIdea && (selectedIdea.status.includes("Feasibility Approved") || selectedIdea.status.includes("Business Analysis") || selectedIdea.status.includes("Estimation") || selectedIdea.status.includes("Project") || selectedIdea.status.includes("Execution"));
-  const isRejected = selectedIdea && (selectedIdea.status.includes("Not ") || selectedIdea.status.includes("Rejected"));
+  const isPassed = selectedIdea?.status.includes("Feasibility Approved") || selectedIdea?.status.includes("Approved by BA") || selectedIdea?.status.includes("Accepted by PM");
+  const isRejected = selectedIdea?.status.includes("Not ") || selectedIdea?.status.includes("Rejected");
 
   return (
     <div className="dashboard-wrapper">
-      {/* Page Header */}
+      {/* Header Banner */}
       <div className="dashboard-header-flex">
         <div className="dash-title-box">
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1>Feasibility Review Panel</h1>
-            <span
-              style={{
-                background: "var(--primary-light)",
-                color: "var(--primary)",
-                padding: "3px 10px",
-                borderRadius: "12px",
-                fontSize: "12px",
-                fontWeight: "700",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px"
-              }}
-            >
-              <FileCheck size={14} /> Stage 2 Multi-Dimensional Review
+            <h1>Feasibility Review Workspace (Three Parallel Reviews)</h1>
+            <span className="category-chip-indigo">
+              <FileCheck size={14} /> Stage 3 Feasibility Gate
             </span>
           </div>
-          <p>Evaluating proposals that passed Initial Screening. All 3 reviews (Tech, Functional, Business) must be Accepted for Feasibility Approval.</p>
+          <p>
+            {isReviewer
+              ? "Reviewer Evaluator Mode: Perform Business, Functional, and Technical feasibility assessments."
+              : `Status Monitoring Mode (${userRole}): View live feasibility review status.`}
+          </p>
         </div>
       </div>
 
-      {/* 4 Clickable KPI Cards */}
-      <div className="kpi-6-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "20px" }}>
-        <div
-          className={`kpi-mini-card ${filterMode === "all" ? "active-kpi-ring" : ""}`}
-          onClick={() => setFilterMode("all")}
-          style={{ cursor: "pointer", border: filterMode === "all" ? "2px solid #6366f1" : "1px solid #e2e8f0" }}
-          title="Click to view All Eligible Proposals"
-        >
-          <div className="kpi-top-row">
-            <span className="kpi-label-txt">Passed Screening Queue</span>
-            <div className="kpi-icon-pill pill-purple">
-              <Layers size={20} />
-            </div>
+      <div className="screening-layout-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2.5fr", gap: "20px" }}>
+        {/* Left Column: Proposals Queue */}
+        <Card title={`Assigned Proposals (${ideas.length})`} subtitle="Select proposal to view feasibility status">
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {ideas.length === 0 ? (
+              <div className="empty-state-flex" style={{ padding: "20px 0" }}>
+                <Inbox size={32} color="var(--text-light)" />
+                <span className="empty-state-title">No proposals in review queue</span>
+              </div>
+            ) : (
+              ideas.map((item) => {
+                const isSelected = selectedIdea && String(selectedIdea.id) === String(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedIdeaId(item.id)}
+                    className={`screening-queue-item ${isSelected ? "active" : ""}`}
+                    style={{
+                      padding: "12px",
+                      borderRadius: "8px",
+                      border: isSelected ? "2px solid #6366f1" : "1px solid #e2e8f0",
+                      background: isSelected ? "#e0e7ff" : "#ffffff",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "10px", fontWeight: "800", background: "#4f46e5", color: "#ffffff", padding: "1px 6px", borderRadius: "4px" }}>
+                        IDEA-{item.id}
+                      </span>
+                      <span className="category-chip">{item.category}</span>
+                    </div>
+                    <div style={{ fontWeight: "700", fontSize: "13px", color: "#1e293b", marginBottom: "4px" }}>{item.title}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px" }}>
+                      <span style={{ color: "#64748b" }}>By {item.author}</span>
+                      <span className="table-badge badge-approved">{item.status}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
-          <span className="kpi-num-val">{passedInitialScreeningIdeas.length}</span>
-        </div>
+        </Card>
 
-        <div
-          className={`kpi-mini-card ${filterMode === "Feasible" ? "active-kpi-ring" : ""}`}
-          onClick={() => setFilterMode("Feasible")}
-          style={{ cursor: "pointer", border: filterMode === "Feasible" ? "2px solid #3b82f6" : "1px solid #e2e8f0" }}
-          title="Click to view Technically Feasible Proposals"
-        >
-          <div className="kpi-top-row">
-            <span className="kpi-label-txt">Technically Feasible</span>
-            <div className="kpi-icon-pill pill-blue">
-              <Cpu size={20} />
-            </div>
-          </div>
-          <span className="kpi-num-val">
-            {ideas.filter((i) => !i.status.includes("Not Technically")).length}
-          </span>
-        </div>
-
-        <div
-          className={`kpi-mini-card ${filterMode === "Approved" ? "active-kpi-ring" : ""}`}
-          onClick={() => setFilterMode("Approved")}
-          style={{ cursor: "pointer", border: filterMode === "Approved" ? "2px solid #22c55e" : "1px solid #e2e8f0" }}
-          title="Click to view Approved Proposals"
-        >
-          <div className="kpi-top-row">
-            <span className="kpi-label-txt">Feasibility Approved</span>
-            <div className="kpi-icon-pill pill-green">
-              <CheckCircle2 size={20} />
-            </div>
-          </div>
-          <span className="kpi-num-val">
-            {ideas.filter((i) => i.status.includes("Feasibility Approved") || i.status.includes("Business Analysis")).length}
-          </span>
-        </div>
-
-        <div
-          className={`kpi-mini-card ${filterMode === "Rejected" ? "active-kpi-ring" : ""}`}
-          onClick={() => setFilterMode("Rejected")}
-          style={{ cursor: "pointer", border: filterMode === "Rejected" ? "2px solid #ef4444" : "1px solid #e2e8f0" }}
-          title="Click to view Non-Feasible Proposals"
-        >
-          <div className="kpi-top-row">
-            <span className="kpi-label-txt">Non-Feasible / Rejected</span>
-            <div className="kpi-icon-pill pill-red">
-              <XCircle size={20} />
-            </div>
-          </div>
-          <span className="kpi-num-val">
-            {ideas.filter((i) => i.status.includes("Not") || i.status.includes("Rejected")).length}
-          </span>
-        </div>
-      </div>
-
-      {/* Main Feasibility Review Workspace */}
-      <div className="screening-workspace-grid">
-        {/* LEFT COLUMN: Select Idea & Details */}
-        <div className="screening-left-col">
-          <Card title="1. Select Proposal (Passed Initial Screening Only)" subtitle="Choose a proposal that passed initial screening">
-            {/* Quick Filter Pill Buttons */}
-            <div style={{ marginBottom: "12px", display: "flex", gap: "6px", alignItems: "center" }}>
-              <span style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)" }}>Filter:</span>
+        {/* Right Column: 3 Parallel Reviews Workspace */}
+        <div>
+          <Card
+            title={selectedIdea ? `Three Parallel Reviews: ${selectedIdea.title}` : "Select a Proposal"}
+            subtitle={isReviewer ? "Evaluate business, functional, and technical dimensions" : "Review feasibility status and recommendations"}
+          >
+            {/* 3 Review Section Navigation Pills */}
+            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
               {[
-                { id: "all", label: "All Passed Ideas" },
-                { id: "Feasible", label: "Feasible" },
-                { id: "Approved", label: "Approved" },
-                { id: "Rejected", label: "Non-Feasible" }
-              ].map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setFilterMode(m.id)}
-                  style={{
-                    background: filterMode === m.id ? "var(--primary)" : "#f1f5f9",
-                    color: filterMode === m.id ? "#ffffff" : "var(--text-dark)",
-                    border: "none",
-                    padding: "3px 10px",
-                    borderRadius: "12px",
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  {m.label}
-                </button>
-              ))}
+                { id: "business", label: "A. Business Review", icon: Briefcase, status: isBizApproved ? "Feasible" : "Not Business Feasible" },
+                { id: "functional", label: "B. Functional Review", icon: Workflow, status: isFuncApproved ? "Feasible" : "Not Functionally Feasible" },
+                { id: "technical", label: "C. Technical Review", icon: Cpu, status: isTechApproved ? "Feasible" : "Not Technically Feasible" }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isSelected = activeTab === tab.id;
+                const isApproved = tab.status === "Feasible";
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      flex: 1,
+                      background: isSelected ? "#4f46e5" : "#f1f5f9",
+                      color: isSelected ? "#ffffff" : "#475569",
+                      border: "none",
+                      padding: "10px 14px",
+                      borderRadius: "10px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      boxShadow: isSelected ? "0 4px 12px rgba(79, 70, 229, 0.25)" : "none"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Icon size={16} />
+                      <span>{tab.label}</span>
+                    </div>
+
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: "800",
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                        background: isApproved ? (isSelected ? "#22c55e" : "#dcfce7") : (isSelected ? "#ef4444" : "#fee2e2"),
+                        color: isApproved ? (isSelected ? "#ffffff" : "#15803d") : (isSelected ? "#ffffff" : "#b91c1c")
+                      }}
+                    >
+                      {tab.status}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "6px 0" }}>
-              {displayedIdeas.length === 0 ? (
-                <div className="empty-state-flex" style={{ padding: "20px 0" }}>
-                  <Inbox size={28} color="var(--text-light)" />
-                  <span className="empty-state-title">No proposals found in Feasibility Queue</span>
-                  <span className="empty-state-sub">Only proposals that passed Initial Screening appear here.</span>
+            {/* SECTION A: BUSINESS REVIEW */}
+            {activeTab === "business" && (
+              isReviewer ? (
+                /* INTERACTIVE REVIEWER FORM WITH RADIO BOXES */
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ background: "#e0e7ff", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#3730a3" }}>
+                    Reviewer Role: Business Head ({bizReviewer})
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <RadioYesNo label="Business Need" value={bizNeed} onChange={setBizNeed} />
+                    <RadioYesNo label="ROI Potential" value={bizRoi} onChange={setBizRoi} />
+                    <RadioYesNo label="Market Opportunity" value={bizMarketOpp} onChange={setBizMarketOpp} />
+                    <RadioYesNo label="Competitive Advantage" value={bizCompAdvantage} onChange={setBizCompAdvantage} />
+                    <RadioYesNo label="Strategic Alignment" value={bizStrategicAlignment} onChange={setBizStrategicAlignment} />
+                    <RadioYesNo label="Customer Demand" value={bizCustomerDemand} onChange={setBizCustomerDemand} />
+                    <RadioYesNo label="Revenue Potential" value={bizRevenuePotential} onChange={setBizRevenuePotential} />
+                    <RadioLevel label="Priority Score" value={bizPriorityScore} onChange={setBizPriorityScore} options={["Low", "Medium", "High"]} />
+                  </div>
+
+                  <div className="input-field-group" style={{ marginTop: "6px" }}>
+                    <label className="input-label">Business Review Comments</label>
+                    <textarea
+                      className="custom-input-elem"
+                      rows={2}
+                      placeholder="Enter strategic business observations..."
+                      value={bizComments}
+                      onChange={(e) => setBizComments(e.target.value)}
+                    ></textarea>
+                  </div>
+
+                  <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "12px 16px", borderRadius: "10px", marginTop: "4px" }}>
+                    <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
+                      Business Recommendation *
+                    </label>
+                    <div style={{ display: "flex", gap: "20px" }}>
+                      {["Approve", "Reject", "Clarify"].map((opt) => (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
+                          <input
+                            type="radio"
+                            name="bizRecommendation"
+                            value={opt}
+                            checked={bizRecommendation === opt}
+                            onChange={() => setBizRecommendation(opt)}
+                          />
+                          {opt === "Approve" ? "Approve Business Feasibility" : opt === "Reject" ? "Reject Business Feasibility" : "Request Clarification"}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <select
-                  className="custom-input-elem"
-                  value={selectedIdea?.id || ""}
-                  onChange={(e) => setSelectedIdeaId(e.target.value)}
-                  style={{ fontSize: "14px", fontWeight: "600" }}
-                >
-                  {displayedIdeas.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title} ({item.category})
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {selectedIdea && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "10px" }}>
-                  <div className="idea-meta-pills-row" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: "none" }}>
-                    <span className="meta-pill">
-                      <Building2 size={13} /> Domain: {selectedIdea.category}
-                    </span>
-                    <span className="meta-pill">
-                      <User size={13} /> Author: {selectedIdea.author}
-                    </span>
-                    <span className="meta-pill">
-                      <Calendar size={13} /> {selectedIdea.date}
-                    </span>
-                    <span className={`table-badge ${isPassed ? "badge-approved" : isRejected ? "badge-rejected" : "badge-review"}`}>
-                      {selectedIdea.status}
+                /* CLEAN NON-REVIEWER STATUS CARD VIEW (NO RADIO BOXES) */
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "18px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+                      Business Feasibility Status
+                    </h3>
+                    <span style={{ fontSize: "13px", padding: "4px 14px", borderRadius: "14px", fontWeight: "800", background: isBizApproved ? "#dcfce7" : "#fee2e2", color: isBizApproved ? "#15803d" : "#b91c1c" }}>
+                      {isBizApproved ? "● Business Feasible (Approved)" : "● Not Business Feasible"}
                     </span>
                   </div>
-
-                  <div className="screening-detail-block" style={{ marginBottom: 0 }}>
-                    <h4 className="screening-section-label">Problem Statement</h4>
-                    <div className="screening-text-box">
-                      {selectedIdea.problemStatement || "No detailed problem statement recorded."}
-                    </div>
+                  <div style={{ fontSize: "13px", color: "#475569" }}>
+                    Assigned Business Evaluator: <strong>{bizReviewer}</strong>
                   </div>
-
-                  <div className="screening-detail-block" style={{ marginBottom: 0 }}>
-                    <h4 className="screening-section-label">Proposed Solution</h4>
-                    <div className="screening-text-box">
-                      {selectedIdea.description || "No detailed solution description recorded."}
-                    </div>
-                  </div>
-
-                  {/* Reviewer Assignment Status Summary */}
-                  <div className="screening-detail-block" style={{ marginBottom: 0, background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                    <h4 className="screening-section-label" style={{ marginBottom: "6px" }}>Assigned Reviewers & Decision</h4>
-                    <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <div><strong>Tech Reviewer:</strong> {techReviewer} — <span style={{ color: techStatus === "Approved" ? "#16a34a" : "#dc2626", fontWeight: "700" }}>{techStatus === "Approved" ? "Accepted" : "Not Technically Feasible"}</span></div>
-                      <div><strong>Functional Reviewer:</strong> {functionalReviewer} — <span style={{ color: functionalStatus === "Approved" ? "#16a34a" : "#dc2626", fontWeight: "700" }}>{functionalStatus === "Approved" ? "Accepted" : "Not Functionally Feasible"}</span></div>
-                      <div><strong>Business Reviewer:</strong> {businessReviewer} — <span style={{ color: businessStatus === "Approved" ? "#16a34a" : "#dc2626", fontWeight: "700" }}>{businessStatus === "Approved" ? "Accepted" : "Not Business Feasible"}</span></div>
-                    </div>
+                  <div style={{ fontSize: "13px", background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", color: "#334155" }}>
+                    <strong>Evaluation Notes:</strong> {bizComments || "Business value, ROI potential, and strategic alignment verified by Business Evaluator."}
                   </div>
                 </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* RIGHT COLUMN: 3-Dimensional Feasibility Evaluation Panel */}
-        <div className="screening-right-col">
-          <Card title="2. Multi-Reviewer Feasibility Panel (3 Reviews)" subtitle="Assign Reviewers & evaluate Technical, Functional & Business Feasibility">
-            {/* 3 Review Tabs Header */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: "8px",
-                marginBottom: "16px",
-                background: "#f1f5f9",
-                padding: "4px",
-                borderRadius: "var(--radius-md)"
-              }}
-            >
-              <button
-                type="button"
-                className={`tab-switch-btn ${activeTab === "technical" ? "active" : ""}`}
-                onClick={() => setActiveTab("technical")}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  background: activeTab === "technical" ? "#ffffff" : "transparent",
-                  color: activeTab === "technical" ? (techStatus === "Approved" ? "#16a34a" : "#dc2626") : "var(--text-muted)",
-                  fontWeight: "700",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: activeTab === "technical" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
-                }}
-              >
-                <Cpu size={15} /> Tech ({techStatus === "Approved" ? "Accepted" : "Rejected"})
-              </button>
-
-              <button
-                type="button"
-                className={`tab-switch-btn ${activeTab === "functional" ? "active" : ""}`}
-                onClick={() => setActiveTab("functional")}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  background: activeTab === "functional" ? "#ffffff" : "transparent",
-                  color: activeTab === "functional" ? (functionalStatus === "Approved" ? "#16a34a" : "#dc2626") : "var(--text-muted)",
-                  fontWeight: "700",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: activeTab === "functional" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
-                }}
-              >
-                <Workflow size={15} /> Functional ({functionalStatus === "Approved" ? "Accepted" : "Rejected"})
-              </button>
-
-              <button
-                type="button"
-                className={`tab-switch-btn ${activeTab === "business" ? "active" : ""}`}
-                onClick={() => setActiveTab("business")}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  background: activeTab === "business" ? "#ffffff" : "transparent",
-                  color: activeTab === "business" ? (businessStatus === "Approved" ? "#16a34a" : "#dc2626") : "var(--text-muted)",
-                  fontWeight: "700",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: activeTab === "business" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
-                }}
-              >
-                <Briefcase size={15} /> Business ({businessStatus === "Approved" ? "Accepted" : "Rejected"})
-              </button>
-            </div>
-
-            {/* TAB 1: TECHNICAL REVIEW */}
-            {activeTab === "technical" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <Input
-                  label="Assign Technical Reviewer Name"
-                  placeholder="e.g. Dr. Rahul Sharma (Chief Architect)"
-                  value={techReviewer}
-                  onChange={(e) => setTechReviewer(e.target.value)}
-                  required
-                />
-
-                <div className="checklist-card-item">
-                  <label className="input-label">Technical Feasibility Level</label>
-                  <select
-                    className="custom-input-elem"
-                    value={techFeasibility}
-                    onChange={(e) => setTechFeasibility(e.target.value)}
-                  >
-                    <option value="High Feasibility"> High Feasibility (Standard Tech Stack)</option>
-                    <option value="Medium Feasibility"> Medium Feasibility (Requires Custom API/Dev)</option>
-                    <option value="Low Feasibility"> Low Feasibility (High Technical Complexity)</option>
-                  </select>
-                </div>
-
-                <div className="checklist-card-item">
-                  <label className="input-label">Architecture & Tech Stack Compatibility</label>
-                  <select
-                    className="custom-input-elem"
-                    value={techStackFit}
-                    onChange={(e) => setTechStackFit(e.target.value)}
-                  >
-                    <option value="Compatible"> Fully Compatible with Infrastructure</option>
-                    <option value="Requires Integration"> Requires New Systems/Integrations</option>
-                  </select>
-                </div>
-
-                {/* Single Button Mutual Exclusion for Technical Review */}
-                <div className="checklist-card-item">
-                  <label className="input-label">Technical Decision Status</label>
-
-                  {techStatus === "Approved" ? (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: "8px" }}>
-                      <span style={{ color: "#16a34a", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <CheckCircle2 size={18} /> Technical Review Status: ACCEPTED
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setTechStatus("Rejected")}
-                        style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        <X size={12} /> Reject (Mark Non-Feasible)
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fef2f2", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: "8px" }}>
-                      <span style={{ color: "#dc2626", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <XCircle size={18} /> Technical Review Status: REJECTED (Not Technically Feasible)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setTechStatus("Approved")}
-                        style={{ background: "#dcfce7", color: "#16a34a", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        <Check size={12} /> Accept Technical Feasibility
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="input-field-group">
-                  <label className="input-label">Technical Assessment Remarks</label>
-                  <textarea
-                    className="custom-input-elem"
-                    rows={3}
-                    placeholder="Enter architecture observations, API requirements, or technical risks..."
-                    value={techRemarks}
-                    onChange={(e) => setTechRemarks(e.target.value)}
-                  ></textarea>
-                </div>
-              </div>
+              )
             )}
 
-            {/* TAB 2: FUNCTIONAL REVIEW */}
+            {/* SECTION B: FUNCTIONAL REVIEW */}
             {activeTab === "functional" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <Input
-                  label="Assign Functional Reviewer Name"
-                  placeholder="e.g. Priya Mehta (VP Operations)"
-                  value={functionalReviewer}
-                  onChange={(e) => setFunctionalReviewer(e.target.value)}
-                  required
-                />
+              isReviewer ? (
+                /* INTERACTIVE REVIEWER FORM WITH RADIO BOXES */
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ background: "#cff4fc", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#055160" }}>
+                    Reviewer Role: Business Analyst ({funcReviewer})
+                  </div>
 
-                <div className="checklist-card-item">
-                  <label className="input-label">Operational Workflow Fit</label>
-                  <select
-                    className="custom-input-elem"
-                    value={functionalFit}
-                    onChange={(e) => setFunctionalFit(e.target.value)}
-                  >
-                    <option value="Seamless Fit"> Seamless Fit (Smooth Operational Integration)</option>
-                    <option value="Moderate Change"> Moderate Operational Workflow Change</option>
-                    <option value="Disruptive"> Disruptive to Current Operations</option>
-                  </select>
-                </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <RadioYesNo label="Requirements Clear?" value={funcReqClear} onChange={setFuncReqClear} />
+                    <RadioYesNo label="Process Defined?" value={funcProcessDefined} onChange={setFuncProcessDefined} />
+                    <RadioYesNo label="Users Identified?" value={funcUsersIdentified} onChange={setFuncUsersIdentified} />
+                    <RadioYesNo label="Workflow Complete?" value={funcWorkflowComplete} onChange={setFuncWorkflowComplete} />
+                    <RadioYesNo label="Compliance Considered?" value={funcComplianceConsidered} onChange={setFuncComplianceConsidered} />
+                    <RadioYesNo label="Dependencies Present?" value={funcDependencies} onChange={setFuncDependencies} />
+                    <RadioYesNo label="Integration Required?" value={funcIntegrationRequired} onChange={setFuncIntegrationRequired} />
+                    <RadioYesNo label="Gap Analysis Performed?" value={funcGapAnalysis} onChange={setFuncGapAnalysis} />
+                    <RadioLevel label="Functional Complexity" value={funcComplexity} onChange={setFuncComplexity} options={["Low", "Medium", "High"]} />
+                  </div>
 
-                <div className="checklist-card-item">
-                  <label className="input-label">End-User Adoption Feasibility</label>
-                  <select
-                    className="custom-input-elem"
-                    value={userAdoption}
-                    onChange={(e) => setUserAdoption(e.target.value)}
-                  >
-                    <option value="High Adoption"> High Adoption Expected (Intuitive)</option>
-                    <option value="Requires Training"> Requires Staff Training & Enablement</option>
-                  </select>
-                </div>
+                  <div className="input-field-group" style={{ marginTop: "6px" }}>
+                    <label className="input-label">Functional Review Comments</label>
+                    <textarea
+                      className="custom-input-elem"
+                      rows={2}
+                      placeholder="Enter operational workflow notes..."
+                      value={funcComments}
+                      onChange={(e) => setFuncComments(e.target.value)}
+                    ></textarea>
+                  </div>
 
-                {/* Single Button Mutual Exclusion for Functional Review */}
-                <div className="checklist-card-item">
-                  <label className="input-label">Functional Decision Status</label>
-
-                  {functionalStatus === "Approved" ? (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: "8px" }}>
-                      <span style={{ color: "#16a34a", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <CheckCircle2 size={18} /> Functional Review Status: ACCEPTED
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setFunctionalStatus("Rejected")}
-                        style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        <X size={12} /> Reject (Mark Non-Feasible)
-                      </button>
+                  <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "12px 16px", borderRadius: "10px", marginTop: "4px" }}>
+                    <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
+                      Functional Recommendation *
+                    </label>
+                    <div style={{ display: "flex", gap: "20px" }}>
+                      {["Approve", "Reject", "Clarify"].map((opt) => (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
+                          <input
+                            type="radio"
+                            name="funcRecommendation"
+                            value={opt}
+                            checked={funcRecommendation === opt}
+                            onChange={() => setFuncRecommendation(opt)}
+                          />
+                          {opt === "Approve" ? "Approve Functional Feasibility" : opt === "Reject" ? "Reject Functional Feasibility" : "Request Clarification"}
+                        </label>
+                      ))}
                     </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fef2f2", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: "8px" }}>
-                      <span style={{ color: "#dc2626", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <XCircle size={18} /> Functional Review Status: REJECTED (Not Functionally Feasible)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setFunctionalStatus("Approved")}
-                        style={{ background: "#dcfce7", color: "#16a34a", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        <Check size={12} /> Accept Functional Feasibility
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
-
-                <div className="input-field-group">
-                  <label className="input-label">Functional Assessment Remarks</label>
-                  <textarea
-                    className="custom-input-elem"
-                    rows={3}
-                    placeholder="Enter user workflow analysis, change management notes..."
-                    value={functionalRemarks}
-                    onChange={(e) => setFunctionalRemarks(e.target.value)}
-                  ></textarea>
+              ) : (
+                /* CLEAN NON-REVIEWER STATUS CARD VIEW (NO RADIO BOXES) */
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "18px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+                      Functional Feasibility Status
+                    </h3>
+                    <span style={{ fontSize: "13px", padding: "4px 14px", borderRadius: "14px", fontWeight: "800", background: isFuncApproved ? "#dcfce7" : "#fee2e2", color: isFuncApproved ? "#15803d" : "#b91c1c" }}>
+                      {isFuncApproved ? "● Functional Feasible (Approved)" : "● Not Functionally Feasible"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#475569" }}>
+                    Assigned Functional Evaluator: <strong>{funcReviewer}</strong>
+                  </div>
+                  <div style={{ fontSize: "13px", background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", color: "#334155" }}>
+                    <strong>Evaluation Notes:</strong> {funcComments || "Operational workflow fit, end-user adoption, and compliance verified by Business Analyst."}
+                  </div>
                 </div>
-              </div>
+              )
             )}
 
-            {/* TAB 3: BUSINESS REVIEW */}
-            {activeTab === "business" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <Input
-                  label="Assign Business Reviewer Name"
-                  placeholder="e.g. Amit Kapoor (Head of Strategy)"
-                  value={businessReviewer}
-                  onChange={(e) => setBusinessReviewer(e.target.value)}
-                  required
-                />
+            {/* SECTION C: TECHNICAL REVIEW */}
+            {activeTab === "technical" && (
+              isReviewer ? (
+                /* INTERACTIVE REVIEWER FORM WITH RADIO BOXES */
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ background: "#dcfce7", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#15803d" }}>
+                    Reviewer Role: Technical Architect ({techReviewer})
+                  </div>
 
-                <div className="checklist-card-item">
-                  <label className="input-label">Financial Viability & ROI Expectation</label>
-                  <select
-                    className="custom-input-elem"
-                    value={financialViability}
-                    onChange={(e) => setFinancialViability(e.target.value)}
-                  >
-                    <option value="High ROI"> High ROI (Strong Cost Savings/Revenue)</option>
-                    <option value="Moderate ROI"> Moderate Financial Return</option>
-                    <option value="Low ROI"> Low Financial Impact</option>
-                  </select>
-                </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <RadioYesNo label="Technology Fit" value={techFit} onChange={setTechFit} />
+                    <RadioYesNo label="Existing Platform Reuse" value={techPlatformReuse} onChange={setTechPlatformReuse} />
+                    <RadioYesNo label="Security & Compliance" value={techSecurity} onChange={setTechSecurity} />
+                    <RadioYesNo label="Performance Expectations" value={techPerformance} onChange={setTechPerformance} />
+                    <RadioYesNo label="Scalability Potential" value={techScalability} onChange={setTechScalability} />
+                    <RadioYesNo label="Cloud Readiness" value={techCloudReadiness} onChange={setTechCloudReadiness} />
+                    <RadioYesNo label="API Availability" value={techApiAvailability} onChange={setTechApiAvailability} />
+                    <RadioYesNo label="Infrastructure Impact" value={techInfraImpact} onChange={setTechInfraImpact} />
+                    <RadioLevel label="Integration Complexity" value={techIntegrationComplexity} onChange={setTechIntegrationComplexity} options={["Low", "Medium", "High"]} />
+                    <RadioLevel label="Technical Risks" value={techRisks} onChange={setTechRisks} options={["Low", "Medium", "High"]} />
+                    <RadioLevel label="Estimated Complexity" value={techEstComplexity} onChange={setTechEstComplexity} options={["Low", "Medium", "High"]} />
+                  </div>
 
-                <div className="checklist-card-item">
-                  <label className="input-label">Strategic Goal Alignment</label>
-                  <select
-                    className="custom-input-elem"
-                    value={strategicPriority}
-                    onChange={(e) => setStrategicPriority(e.target.value)}
-                  >
-                    <option value="High Priority"> Critical Strategic Focus Area</option>
-                    <option value="Medium Priority"> Secondary Business Objective</option>
-                  </select>
-                </div>
+                  <div className="input-field-group" style={{ marginTop: "6px" }}>
+                    <label className="input-label">Technical Review Comments</label>
+                    <textarea
+                      className="custom-input-elem"
+                      rows={2}
+                      placeholder="Enter architecture observations, API specifications..."
+                      value={techComments}
+                      onChange={(e) => setTechComments(e.target.value)}
+                    ></textarea>
+                  </div>
 
-                {/* Single Button Mutual Exclusion for Business Review */}
-                <div className="checklist-card-item">
-                  <label className="input-label">Business Decision Status</label>
-
-                  {businessStatus === "Approved" ? (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: "8px" }}>
-                      <span style={{ color: "#16a34a", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <CheckCircle2 size={18} /> Business Review Status: ACCEPTED
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setBusinessStatus("Rejected")}
-                        style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        <X size={12} /> Reject (Mark Non-Feasible)
-                      </button>
+                  <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "12px 16px", borderRadius: "10px", marginTop: "4px" }}>
+                    <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
+                      Technical Recommendation *
+                    </label>
+                    <div style={{ display: "flex", gap: "20px" }}>
+                      {["Approve", "Reject", "Clarify"].map((opt) => (
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
+                          <input
+                            type="radio"
+                            name="techRecommendation"
+                            value={opt}
+                            checked={techRecommendation === opt}
+                            onChange={() => setTechRecommendation(opt)}
+                          />
+                          {opt === "Approve" ? "Approve Technical Feasibility" : opt === "Reject" ? "Reject Technical Feasibility" : "Request Clarification"}
+                        </label>
+                      ))}
                     </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fef2f2", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: "8px" }}>
-                      <span style={{ color: "#dc2626", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <XCircle size={18} /> Business Review Status: REJECTED (Not Business Feasible)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setBusinessStatus("Approved")}
-                        style={{ background: "#dcfce7", color: "#16a34a", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        <Check size={12} /> Accept Business Feasibility
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
-
-                <div className="input-field-group">
-                  <label className="input-label">Business Assessment Remarks</label>
-                  <textarea
-                    className="custom-input-elem"
-                    rows={3}
-                    placeholder="Enter business value creation, market impact notes..."
-                    value={businessRemarks}
-                    onChange={(e) => setBusinessRemarks(e.target.value)}
-                  ></textarea>
+              ) : (
+                /* CLEAN NON-REVIEWER STATUS CARD VIEW (NO RADIO BOXES) */
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "18px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+                      Technical Feasibility Status
+                    </h3>
+                    <span style={{ fontSize: "13px", padding: "4px 14px", borderRadius: "14px", fontWeight: "800", background: isTechApproved ? "#dcfce7" : "#fee2e2", color: isTechApproved ? "#15803d" : "#b91c1c" }}>
+                      {isTechApproved ? "● Technical Feasible (Approved)" : "● Not Technically Feasible"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#475569" }}>
+                    Assigned Technical Evaluator: <strong>{techReviewer}</strong>
+                  </div>
+                  <div style={{ fontSize: "13px", background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", color: "#334155" }}>
+                    <strong>Evaluation Notes:</strong> {techComments || "Architecture stack compatibility, API security, and scalability verified by Technical Architect."}
+                  </div>
                 </div>
-              </div>
+              )
             )}
 
-            {/* Action Final Decision Box */}
-            <div className="screening-decision-box" style={{ marginTop: "20px" }}>
-              <h4 style={{ fontSize: "14px", fontWeight: "700", marginBottom: "6px", color: "var(--text-dark)" }}>
-                Feasibility Review Final Action
+            {/* OVERALL FEASIBILITY ACTION & EVALUATION STATUS */}
+            <div className="screening-decision-box" style={{ marginTop: "24px", paddingTop: "16px", borderTop: "2px solid #e2e8f0" }}>
+              <h4 style={{ fontSize: "15px", fontWeight: "800", marginBottom: "10px", color: "var(--text-dark)" }}>
+                Three Parallel Reviews Summary & Status Breakdown
               </h4>
 
-              {/* Real-time Summary Status of 3 Reviews */}
-              <div style={{ background: allThreeApproved ? "#f0fdf4" : "#fef2f2", border: allThreeApproved ? "1px solid #bbf7d0" : "1px solid #fecaca", padding: "12px", borderRadius: "8px", marginBottom: "14px", fontSize: "13px" }}>
-                <div style={{ marginBottom: "6px", fontWeight: "700", color: allThreeApproved ? "#16a34a" : "#dc2626" }}>
-                  {allThreeApproved ? "All 3 Reviews Accepted (Technical, Functional, Business)" : `NON-FEASIBLE — Reason: ${rejectionReason}`}
+              {/* 3 Review Cards Status Summary */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                <div style={{ padding: "10px", borderRadius: "8px", background: isBizApproved ? "#f0fdf4" : "#fef2f2", border: isBizApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>A. BUSINESS REVIEW</div>
+                  <div style={{ fontSize: "12px", fontWeight: "800", color: isBizApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
+                    {isBizApproved ? "Feasible" : "Not Business Feasible"}
+                  </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px" }}>
-                  <div><strong>Tech Review:</strong> <span style={{ color: techStatus === "Approved" ? "#16a34a" : "#dc2626", fontWeight: "700" }}>{techStatus === "Approved" ? "Accepted" : "Not Technically Feasible"}</span></div>
-                  <div><strong>Functional Review:</strong> <span style={{ color: functionalStatus === "Approved" ? "#16a34a" : "#dc2626", fontWeight: "700" }}>{functionalStatus === "Approved" ? "Accepted" : "Not Functionally Feasible"}</span></div>
-                  <div><strong>Business Review:</strong> <span style={{ color: businessStatus === "Approved" ? "#16a34a" : "#dc2626", fontWeight: "700" }}>{businessStatus === "Approved" ? "Accepted" : "Not Business Feasible"}</span></div>
+
+                <div style={{ padding: "10px", borderRadius: "8px", background: isFuncApproved ? "#f0fdf4" : "#fef2f2", border: isFuncApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>B. FUNCTIONAL REVIEW</div>
+                  <div style={{ fontSize: "12px", fontWeight: "800", color: isFuncApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
+                    {isFuncApproved ? "Feasible" : "Not Functionally Feasible"}
+                  </div>
+                </div>
+
+                <div style={{ padding: "10px", borderRadius: "8px", background: isTechApproved ? "#f0fdf4" : "#fef2f2", border: isTechApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>C. TECHNICAL REVIEW</div>
+                  <div style={{ fontSize: "12px", fontWeight: "800", color: isTechApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
+                    {isTechApproved ? "Feasible" : "Not Technically Feasible"}
+                  </div>
                 </div>
               </div>
 
-              {/* Conditional Action Render: Hide Accept button once Feasibility is Approved */}
-              {isPassed ? (
-                <div style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", padding: "14px", borderRadius: "8px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "14px" }}>
-                  <CheckCircle2 size={20} />
-                  <span>Feasibility Approved & Accepted (Forwarded to Stage 3)</span>
-                </div>
-              ) : isRejected ? (
-                <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px", borderRadius: "8px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "14px" }}>
-                  <XCircle size={20} />
-                  <span>Status: {selectedIdea.status}</span>
+              {/* OVERALL STATUS NOTIFICATION */}
+              {isAnyRejected ? (
+                <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", padding: "14px", borderRadius: "10px", marginBottom: "14px" }}>
+                  <div style={{ fontWeight: "800", color: "#dc2626", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <XCircle size={18} /> OVERALL FEASIBILITY REJECTED
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#b91c1c", margin: "4px 0 0 0" }}>
+                    Rejection Status: {!isBizApproved ? "Not Business Feasible" : !isFuncApproved ? "Not Functionally Feasible" : "Not Technically Feasible"}
+                  </p>
                 </div>
               ) : allThreeApproved ? (
-                <div>
-                  <p style={{ fontSize: "12px", color: "#16a34a", marginBottom: "10px", fontWeight: "600" }}>
-                    All 3 Reviews are Accepted. Click below to approve feasibility for this proposal:
+                <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", padding: "14px", borderRadius: "10px", marginBottom: "14px" }}>
+                  <div style={{ fontWeight: "800", color: "#16a34a", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <CheckCircle2 size={18} /> ALL 3 REVIEWS APPROVED (FEASIBLE)
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#15803d", margin: "4px 0 0 0" }}>
+                    Business, Functional, and Technical feasibility dimensions are 100% Approved.
                   </p>
+                </div>
+              ) : null}
+
+              {/* ACTION BUTTONS FOR ASSIGNED REVIEWERS VS CLEAN STATUS VIEW FOR OTHERS */}
+              {isReviewer ? (
+                isPassed ? (
+                  <div style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", padding: "14px", borderRadius: "8px", fontWeight: "700", textAlign: "center" }}>
+                    ✓ Feasibility Approved & Accepted (Forwarded to Stage 4 Business Analysis)
+                  </div>
+                ) : isRejected ? (
+                  <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px", borderRadius: "8px", fontWeight: "700", textAlign: "center" }}>
+                    ✕ Status: {selectedIdea?.status}
+                  </div>
+                ) : allThreeApproved ? (
                   <Button
                     variant="primary"
                     icon={CheckCircle2}
-                    onClick={handleDirectAcceptFeasibility}
-                    style={{ width: "100%", justifyContent: "center" }}
+                    onClick={() => handleFinalSubmitReview("Approve")}
+                    style={{ width: "100%", justifyContent: "center", height: "46px", fontSize: "15px", fontWeight: "700" }}
                   >
-                    Accept & Approve Feasibility
+                    Accept & Approve Overall Feasibility
                   </Button>
-                </div>
-              ) : (
-                <div>
-                  <p style={{ fontSize: "12px", color: "#dc2626", marginBottom: "10px", fontWeight: "600" }}>
-                    Cannot Approve Feasibility because one or more reviews failed. Click below to publish the non-feasible status:
-                  </p>
+                ) : (
                   <Button
                     variant="danger"
                     icon={XCircle}
-                    onClick={handleDirectRejectFeasibility}
-                    style={{ width: "100%", justifyContent: "center" }}
+                    onClick={() => handleFinalSubmitReview("Reject")}
+                    style={{ width: "100%", justifyContent: "center", height: "46px", fontSize: "15px", fontWeight: "700" }}
                   >
-                    Reject Feasibility ({rejectionReason})
+                    Reject Overall Feasibility
                   </Button>
+                )
+              ) : (
+                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "14px 18px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#3b82f6", textTransform: "uppercase" }}>FEASIBILITY MONITORING STATUS</div>
+                    <div style={{ fontSize: "15px", fontWeight: "800", color: "#1e3a8a", marginTop: "2px" }}>
+                      {selectedIdea?.status || (isAnyRejected ? (!isBizApproved ? "Not Business Feasible" : !isFuncApproved ? "Not Functionally Feasible" : "Not Technically Feasible") : "Feasibility Approved")}
+                    </div>
+                  </div>
+                  <span className="table-badge badge-approved" style={{ fontSize: "12px", padding: "4px 12px", background: "#dcfce7", color: "#15803d" }}>
+                    ● Live Status ({userRole})
+                  </span>
                 </div>
               )}
             </div>

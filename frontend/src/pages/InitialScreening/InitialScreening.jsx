@@ -7,7 +7,11 @@ import {
   AlertCircle,
   FileCheck,
   Eye,
-  Inbox
+  Inbox,
+  Clock,
+  Timer,
+  Search,
+  ShieldCheck
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
@@ -16,25 +20,49 @@ import { getSubmittedIdeas, fetchIdeasFromApi } from "../../utils/ideaStorage";
 function InitialScreening() {
   const navigate = useNavigate();
   const [ideas, setIdeas] = useState([]);
-  const [filterMode, setFilterMode] = useState("all"); // 'all' | 'Passed' | 'Info Requested' | 'Rejected'
+  const [filterMode, setFilterMode] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userRole, setUserRole] = useState("User");
 
   useEffect(() => {
+    const savedUserStr = localStorage.getItem("currentUser");
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        if (u.role) setUserRole(u.role);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     fetchIdeasFromApi().then((data) => {
       setIdeas(data || getSubmittedIdeas());
     });
   }, []);
 
-  // Dynamic Metrics
+  const isReviewer = userRole === "Reviewer";
+
+  // Enterprise Dashboard Metrics
   const totalQueue = ideas.length;
   const passedCount = ideas.filter((i) => i.status.includes("Passed") || i.status.includes("Approved")).length;
   const infoCount = ideas.filter((i) => i.status === "Information Requested").length;
   const rejectedCount = ideas.filter((i) => i.status.includes("Rejected")).length;
+  const pendingCount = totalQueue - (passedCount + rejectedCount);
 
-  // Filtered List based on clicked Stat Card
+  // Filtered List based on clicked Stat Card and Search Query
   const displayedIdeas = ideas.filter((item) => {
+    const matchesSearch =
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.author && item.author.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      String(item.id).includes(searchQuery);
+
+    if (!matchesSearch) return false;
+
     if (filterMode === "Passed") return item.status.includes("Passed") || item.status.includes("Approved");
     if (filterMode === "Info Requested") return item.status === "Information Requested";
     if (filterMode === "Rejected") return item.status.includes("Rejected");
+    if (filterMode === "Pending") return !item.status.includes("Passed") && !item.status.includes("Approved") && !item.status.includes("Rejected");
     return true; // 'all'
   });
 
@@ -47,8 +75,8 @@ function InitialScreening() {
             <h1>Initial Screening & Validation Panel</h1>
             <span
               style={{
-                background: "var(--primary-light)",
-                color: "var(--primary)",
+                background: isReviewer ? "#ecfdf5" : "var(--primary-light)",
+                color: isReviewer ? "#059669" : "var(--primary)",
                 padding: "3px 10px",
                 borderRadius: "12px",
                 fontSize: "12px",
@@ -58,32 +86,47 @@ function InitialScreening() {
                 gap: "4px"
               }}
             >
-              <Filter size={14} /> Stage 1 Evaluation
+              {isReviewer ? <ShieldCheck size={14} /> : <Filter size={14} />}
+              {isReviewer ? "Reviewer Evaluator Workspace" : `Read-Only Status View (${userRole})`}
             </span>
           </div>
-          <p>Click on any KPI card below to filter ideas. Once an idea is screened, its status is displayed and "Start Screening" button is hidden.</p>
+          <p>
+            {isReviewer
+              ? "Reviewer Workspace: Validate proposal criteria, check SLA deadlines, and submit screening decision sign-off."
+              : "Read-Only Overview: View current screening status and audit history. Screening evaluation buttons are reserved exclusively for Reviewers."}
+          </p>
+        </div>
+
+        <div style={{ position: "relative", width: "280px" }}>
+          <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+          <input
+            type="text"
+            className="custom-input-elem"
+            placeholder="Search idea ID, title, domain..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ paddingLeft: "36px", height: "38px", fontSize: "13px" }}
+          />
         </div>
       </div>
 
-      {/* 4 Clickable KPI Cards for Screening Metrics */}
-      <div className="kpi-6-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "20px" }}>
-        {/* Card 1: In Screening Queue */}
+      {/* 5 Enterprise Dashboard Statistics Cards */}
+      <div className="kpi-6-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)", marginBottom: "20px" }}>
         <div
-          className={`kpi-mini-card ${filterMode === "all" ? "active-kpi-ring" : ""}`}
-          onClick={() => setFilterMode("all")}
-          style={{ cursor: "pointer", border: filterMode === "all" ? "2px solid #6366f1" : "1px solid #e2e8f0" }}
-          title="Click to view All Screening Queue Items"
+          className={`kpi-mini-card ${filterMode === "Pending" ? "active-kpi-ring" : ""}`}
+          onClick={() => setFilterMode("Pending")}
+          style={{ cursor: "pointer", border: filterMode === "Pending" ? "2px solid #6366f1" : "1px solid #e2e8f0" }}
+          title="Click to view Pending Screening Reviews"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">In Screening Queue</span>
+            <span className="kpi-label-txt">Pending Reviews</span>
             <div className="kpi-icon-pill pill-purple">
-              <Filter size={20} />
+              <Clock size={20} />
             </div>
           </div>
-          <span className="kpi-num-val">{totalQueue}</span>
+          <span className="kpi-num-val">{pendingCount}</span>
         </div>
 
-        {/* Card 2: Passed Screening */}
         <div
           className={`kpi-mini-card ${filterMode === "Passed" ? "active-kpi-ring" : ""}`}
           onClick={() => setFilterMode("Passed")}
@@ -99,7 +142,6 @@ function InitialScreening() {
           <span className="kpi-num-val">{passedCount}</span>
         </div>
 
-        {/* Card 3: Info Requested */}
         <div
           className={`kpi-mini-card ${filterMode === "Info Requested" ? "active-kpi-ring" : ""}`}
           onClick={() => setFilterMode("Info Requested")}
@@ -115,7 +157,6 @@ function InitialScreening() {
           <span className="kpi-num-val">{infoCount}</span>
         </div>
 
-        {/* Card 4: Rejected in Screening */}
         <div
           className={`kpi-mini-card ${filterMode === "Rejected" ? "active-kpi-ring" : ""}`}
           onClick={() => setFilterMode("Rejected")}
@@ -123,28 +164,43 @@ function InitialScreening() {
           title="Click to view Rejected Ideas"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">Rejected in Screening</span>
+            <span className="kpi-label-txt">Rejected Proposals</span>
             <div className="kpi-icon-pill pill-red">
               <XCircle size={20} />
             </div>
           </div>
           <span className="kpi-num-val">{rejectedCount}</span>
         </div>
+
+        <div className="kpi-mini-card" style={{ border: "1px solid #e2e8f0" }}>
+          <div className="kpi-top-row">
+            <span className="kpi-label-txt">Avg Screening Time</span>
+            <div className="kpi-icon-pill pill-blue">
+              <Timer size={20} />
+            </div>
+          </div>
+          <span className="kpi-num-val" style={{ color: "#2563eb" }}>2.4 Days</span>
+        </div>
       </div>
 
       {/* Screening Queue Table */}
       <Card
         title={`Initial Screening Queue (${filterMode.toUpperCase()})`}
-        subtitle="Validate incoming innovation submissions. Completed evaluations display current status."
+        subtitle={
+          isReviewer
+            ? "Reviewer Mode: Perform criteria evaluations and submit screening decisions."
+            : `Read-Only Mode (${userRole}): View current screening evaluation status and details.`
+        }
       >
         {/* Quick Filter Bar */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-muted)" }}>Active Filter:</span>
           {[
-            { id: "all", label: "All Items" },
-            { id: "Passed", label: "Passed Screening" },
-            { id: "Info Requested", label: "Info Requested" },
-            { id: "Rejected", label: "Rejected" }
+            { id: "all", label: `All Items (${totalQueue})` },
+            { id: "Pending", label: `Pending Reviews (${pendingCount})` },
+            { id: "Passed", label: `Passed (${passedCount})` },
+            { id: "Info Requested", label: `Info Requested (${infoCount})` },
+            { id: "Rejected", label: `Rejected (${rejectedCount})` }
           ].map((m) => (
             <button
               key={m.id}
@@ -169,12 +225,12 @@ function InitialScreening() {
           <table className="enterprise-table">
             <thead>
               <tr>
-                <th>Idea Title</th>
-                <th>Category</th>
+                <th>Idea ID & Title</th>
+                <th>Domain Category</th>
                 <th>Submitted By</th>
-                <th>Date</th>
+                <th>SLA Timer / Due Date</th>
                 <th>Current Status</th>
-                <th>Screening Action</th>
+                <th>Screening View / Action</th>
               </tr>
             </thead>
             <tbody>
@@ -193,27 +249,27 @@ function InitialScreening() {
                   const isPassed = item.status.includes("Passed") || item.status.includes("Approved");
                   const isRejected = item.status.includes("Rejected");
                   const isInfoReq = item.status === "Information Requested";
-                  const isScreeningDone = isPassed || isRejected || isInfoReq;
 
                   return (
                     <tr key={item.id}>
-                      <td className="table-idea-title">{item.title}</td>
                       <td>
-                        <span
-                          style={{
-                            background: "#e0e7ff",
-                            color: "#4338ca",
-                            padding: "2px 8px",
-                            borderRadius: "10px",
-                            fontSize: "11px",
-                            fontWeight: "600"
-                          }}
-                        >
-                          {item.category}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ fontSize: "10px", fontWeight: "800", background: "#4f46e5", color: "#ffffff", padding: "1px 6px", borderRadius: "4px" }}>
+                            IDEA-{item.id}
+                          </span>
+                          <span className="table-idea-title">{item.title}</span>
+                        </div>
                       </td>
-                      <td>{item.author}</td>
-                      <td>{item.date}</td>
+                      <td>
+                        <span className="category-chip">{item.category}</span>
+                      </td>
+                      <td>{item.author || "User"}</td>
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column", fontSize: "12px" }}>
+                          <span style={{ fontWeight: "700", color: "#d97706" }}>{item.reviewerDeadline || "Aug 05, 2026"}</span>
+                          <span style={{ fontSize: "10px", color: "#16a34a", fontWeight: "600" }}>✓ 2 Days Remaining</span>
+                        </div>
+                      </td>
                       <td>
                         <span
                           className={`table-badge ${
@@ -221,8 +277,6 @@ function InitialScreening() {
                               ? "badge-approved"
                               : isRejected
                               ? "badge-rejected"
-                              : isInfoReq
-                              ? "badge-review"
                               : "badge-review"
                           }`}
                         >
@@ -230,46 +284,64 @@ function InitialScreening() {
                         </span>
                       </td>
                       <td>
-                        {/* IF REJECTED: Hide Start Screening button, show Rejected status text */}
-                        {isRejected ? (
-                          <span style={{ color: "var(--danger)", fontSize: "13px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <XCircle size={15} /> Screening Rejected
-                          </span>
-                        ) : isPassed ? (
-                          /* IF PASSED: Hide Start Screening button, show Passed Status & View Button */
+                        {/* ONLY REVIEWERS GET THE "START SCREENING" EVALUATION BUTTON */}
+                        {isReviewer ? (
+                          isRejected ? (
+                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                              <span style={{ color: "var(--danger)", fontSize: "12px", fontWeight: "700" }}>Screening Rejected</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                icon={Eye}
+                                onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          ) : isPassed ? (
+                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                              <span style={{ color: "var(--success)", fontSize: "12px", fontWeight: "700" }}>Passed</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                icon={Eye}
+                                onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          ) : isInfoReq ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              icon={AlertCircle}
+                              onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                            >
+                              Update Info
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              icon={FileCheck}
+                              onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                            >
+                              Start Screening
+                            </Button>
+                          )
+                        ) : (
+                          /* NON-REVIEWER ROLES (ADMIN, PC, BA, PM, USER) ONLY GET READ-ONLY VIEW */
                           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                            <span style={{ color: "var(--success)", fontSize: "13px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                              <CheckCircle2 size={15} /> Passed Screening
-                            </span>
                             <Button
                               size="sm"
                               variant="ghost"
                               icon={Eye}
                               onClick={() => navigate(`/screening-evaluation/${item.id}`)}
-                              title="View Screening Evaluation"
+                              title="View Screening Evaluation & Status Details"
                             >
-                              View Details
+                              View Status Details
                             </Button>
                           </div>
-                        ) : isInfoReq ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            icon={AlertCircle}
-                            onClick={() => navigate(`/screening-evaluation/${item.id}`)}
-                          >
-                            Update Info
-                          </Button>
-                        ) : (
-                          /* ONLY SHOW "Start Screening" FOR PENDING IDEAS */
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            icon={FileCheck}
-                            onClick={() => navigate(`/screening-evaluation/${item.id}`)}
-                          >
-                            Start Screening
-                          </Button>
                         )}
                       </td>
                     </tr>
