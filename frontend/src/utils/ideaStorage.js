@@ -118,7 +118,7 @@ export function updateIdeaStatus(id, newStatus, evaluatorNotes = "") {
   // Broadcast Stage Progression Notification to Project Coordinator & Administrator
   createNotification({
     recipientRole: "Project Coordinator",
-    title: `✅ Stage Update: Proposal IDEA-${id}`,
+    title: `✅ Stage Update: ${ideaTitle}`,
     message: `Proposal "${ideaTitle}" passed to stage status: "${newStatus}". Notes: ${evaluatorNotes || "N/A"}.`,
     ideaId: id,
     type: "stage_pass"
@@ -126,7 +126,7 @@ export function updateIdeaStatus(id, newStatus, evaluatorNotes = "") {
 
   createNotification({
     recipientRole: "Administrator",
-    title: `✅ Stage Update: Proposal IDEA-${id}`,
+    title: `✅ Stage Update: ${ideaTitle}`,
     message: `Proposal "${ideaTitle}" passed to stage status: "${newStatus}". Notes: ${evaluatorNotes || "N/A"}.`,
     ideaId: id,
     type: "stage_pass"

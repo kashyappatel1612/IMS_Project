@@ -290,8 +290,8 @@ function ScreeningEvaluation() {
           <Card title="1. Proposal Details & Submitter Information">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", padding: "6px 0" }}>
               <div>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>PROPOSAL ID</span>
-                <div style={{ fontSize: "14px", fontWeight: "800", color: "#4f46e5" }}>IDEA-{idea.id}</div>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>PROPOSAL TITLE</span>
+                <div style={{ fontSize: "14px", fontWeight: "800", color: "#4f46e5" }}>{idea.title}</div>
               </div>
               <div>
                 <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>INDUSTRY DOMAIN</span>

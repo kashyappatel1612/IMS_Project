@@ -17,167 +17,71 @@ import {
   User,
   Calendar,
   Layers,
-  Sparkles,
   Inbox,
   Check,
   X,
-  HelpCircle,
-  Shield
+  ChevronDown
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import Input from "../../components/Input";
 import { getSubmittedIdeas, updateIdeaStatus } from "../../utils/ideaStorage";
-
-// Helper Component for Yes/No Radio Buttons (Reviewers Only)
-const RadioYesNo = ({ label, value, onChange }) => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "8px 12px",
-      background: "#f8fafc",
-      borderRadius: "8px",
-      border: "1px solid #e2e8f0"
-    }}
-  >
-    <span style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>{label}</span>
-    <div style={{ display: "flex", gap: "14px" }}>
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "5px",
-          cursor: "pointer",
-          fontSize: "13px",
-          fontWeight: "700",
-          color: value === "Yes" ? "#16a34a" : "#64748b"
-        }}
-      >
-        <input
-          type="radio"
-          name={label.replace(/\s+/g, "_")}
-          value="Yes"
-          checked={value === "Yes"}
-          onChange={() => onChange("Yes")}
-        />
-        Yes
-      </label>
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "5px",
-          cursor: "pointer",
-          fontSize: "13px",
-          fontWeight: "700",
-          color: value === "No" ? "#dc2626" : "#64748b"
-        }}
-      >
-        <input
-          type="radio"
-          name={label.replace(/\s+/g, "_")}
-          value="No"
-          checked={value === "No"}
-          onChange={() => onChange("No")}
-        />
-        No
-      </label>
-    </div>
-  </div>
-);
-
-// Helper Component for Low / Medium / High Selector (Reviewers Only)
-const RadioLevel = ({ label, value, onChange, options = ["Low", "Medium", "High"] }) => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "8px 12px",
-      background: "#f8fafc",
-      borderRadius: "8px",
-      border: "1px solid #e2e8f0"
-    }}
-  >
-    <span style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>{label}</span>
-    <div style={{ display: "flex", gap: "10px" }}>
-      {options.map((opt) => (
-        <label
-          key={opt}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            cursor: "pointer",
-            fontSize: "12px",
-            fontWeight: "700",
-            color: value === opt ? "#4f46e5" : "#64748b"
-          }}
-        >
-          <input
-            type="radio"
-            name={label.replace(/\s+/g, "_")}
-            value={opt}
-            checked={value === opt}
-            onChange={() => onChange(opt)}
-          />
-          {opt}
-        </label>
-      ))}
-    </div>
-  </div>
-);
 
 function FeasibilityReview() {
   const [ideas, setIdeas] = useState([]);
-  const [selectedIdeaId, setSelectedIdeaId] = useState(null);
+  const [selectedIdeaId, setSelectedIdeaId] = useState(""); // Default empty string
   const [activeTab, setActiveTab] = useState("business"); // 'business' | 'functional' | 'technical'
   const [userRole, setUserRole] = useState("User");
 
-  // SECTION A: BUSINESS REVIEW STATE (Reviewer: Business Head)
+  // =========================================================================
+  // SECTION A: BUSINESS REVIEW STATE (Fields from Excel Sheet Column 1)
+  // All Text Inputs
+  // =========================================================================
   const [bizReviewer, setBizReviewer] = useState("Amit Kapoor (Head of Business Strategy)");
-  const [bizNeed, setBizNeed] = useState("Yes");
-  const [bizRoi, setBizRoi] = useState("Yes");
-  const [bizMarketOpp, setBizMarketOpp] = useState("Yes");
-  const [bizCompAdvantage, setBizCompAdvantage] = useState("Yes");
-  const [bizStrategicAlignment, setBizStrategicAlignment] = useState("Yes");
-  const [bizCustomerDemand, setBizCustomerDemand] = useState("Yes");
-  const [bizRevenuePotential, setBizRevenuePotential] = useState("Yes");
-  const [bizPriorityScore, setBizPriorityScore] = useState("High");
+  const [bizExpectedBenefits, setBizExpectedBenefits] = useState("");
+  const [bizCostSavings, setBizCostSavings] = useState("");
+  const [bizEffortsSavings, setBizEffortsSavings] = useState("");
+  const [bizProductivityImprovement, setBizProductivityImprovement] = useState("");
+  const [bizQualityImprovement, setBizQualityImprovement] = useState("");
+  const [bizCustomerUserExp, setBizCustomerUserExp] = useState("");
+  const [bizComplianceRiskReduction, setBizComplianceRiskReduction] = useState("");
+  const [bizCompanyStrategyAlign, setBizCompanyStrategyAlign] = useState("");
+  const [bizRegulatoryReq, setBizRegulatoryReq] = useState("");
+  const [bizExpectedRoi, setBizExpectedRoi] = useState("");
+  const [bizRisksIfImplemented, setBizRisksIfImplemented] = useState("");
+  const [bizRisksIfNotImplemented, setBizRisksIfNotImplemented] = useState("");
   const [bizComments, setBizComments] = useState("");
-  const [bizRecommendation, setBizRecommendation] = useState("Approve"); // 'Approve' | 'Reject' | 'Clarify'
+  const [bizRecommendation, setBizRecommendation] = useState("Approve"); // Restored to default 'Approve'
 
-  // SECTION B: FUNCTIONAL REVIEW STATE (Reviewer: Business Analyst)
+  // =========================================================================
+  // SECTION B: FUNCTIONAL REVIEW STATE (Fields from Excel Sheet Column 2)
+  // All Text Inputs
+  // =========================================================================
   const [funcReviewer, setFuncReviewer] = useState("Priya Mehta (Lead Business Analyst)");
-  const [funcReqClear, setFuncReqClear] = useState("Yes");
-  const [funcProcessDefined, setFuncProcessDefined] = useState("Yes");
-  const [funcUsersIdentified, setFuncUsersIdentified] = useState("Yes");
-  const [funcWorkflowComplete, setFuncWorkflowComplete] = useState("Yes");
-  const [funcComplianceConsidered, setFuncComplianceConsidered] = useState("Yes");
-  const [funcDependencies, setFuncDependencies] = useState("No");
-  const [funcIntegrationRequired, setFuncIntegrationRequired] = useState("Yes");
-  const [funcGapAnalysis, setFuncGapAnalysis] = useState("Yes");
-  const [funcComplexity, setFuncComplexity] = useState("Medium");
+  const [funcNewOrOld, setFuncNewOrOld] = useState("");
+  const [funcUsersAffected, setFuncUsersAffected] = useState("");
+  const [funcChangeManagementReq, setFuncChangeManagementReq] = useState("");
+  const [funcProcessImpact, setFuncProcessImpact] = useState("");
+  const [funcOperationalRisk, setFuncOperationalRisk] = useState("");
   const [funcComments, setFuncComments] = useState("");
-  const [funcRecommendation, setFuncRecommendation] = useState("Approve"); // 'Approve' | 'Reject' | 'Clarify'
+  const [funcRecommendation, setFuncRecommendation] = useState("Approve"); // Restored to default 'Approve'
 
-  // SECTION C: TECHNICAL REVIEW STATE (Reviewer: Technical Architect)
+  // =========================================================================
+  // SECTION C: TECHNICAL REVIEW STATE (Fields from Excel Sheet Column 3)
+  // Solution type (DD), Tech Stack (DD), Tech complexity (DD) -> Dropdowns
+  // All other fields -> Text Inputs
+  // =========================================================================
   const [techReviewer, setTechReviewer] = useState("Dr. Rahul Sharma (Chief Technical Architect)");
-  const [techFit, setTechFit] = useState("Yes");
-  const [techPlatformReuse, setTechPlatformReuse] = useState("Yes");
-  const [techSecurity, setTechSecurity] = useState("Yes");
-  const [techPerformance, setTechPerformance] = useState("Yes");
-  const [techScalability, setTechScalability] = useState("Yes");
-  const [techCloudReadiness, setTechCloudReadiness] = useState("Yes");
-  const [techIntegrationComplexity, setTechIntegrationComplexity] = useState("Low");
-  const [techApiAvailability, setTechApiAvailability] = useState("Yes");
-  const [techInfraImpact, setTechInfraImpact] = useState("Yes");
-  const [techRisks, setTechRisks] = useState("Low");
-  const [techEstComplexity, setTechEstComplexity] = useState("Medium");
+  const [techSolutionType, setTechSolutionType] = useState("Web Application"); // Dropdown
+  const [techStack, setTechStack] = useState("React / Node.js / PostgreSQL"); // Dropdown
+  const [techComplexity, setTechComplexity] = useState("Medium"); // Dropdown
+  const [techDataAssessment, setTechDataAssessment] = useState("");
+  const [techInfra, setTechInfra] = useState("");
+  const [techIntegrationReq, setTechIntegrationReq] = useState("");
+  const [techRisks, setTechRisks] = useState("");
+  const [techDevQaEfforts, setTechDevQaEfforts] = useState("");
+  const [techSecurityConcerns, setTechSecurityConcerns] = useState("");
   const [techComments, setTechComments] = useState("");
-  const [techRecommendation, setTechRecommendation] = useState("Approve"); // 'Approve' | 'Reject' | 'Clarify'
+  const [techRecommendation, setTechRecommendation] = useState("Approve"); // Restored to default 'Approve'
 
   useEffect(() => {
     const savedUserStr = localStorage.getItem("currentUser");
@@ -190,13 +94,10 @@ function FeasibilityReview() {
 
     const list = getSubmittedIdeas();
     setIdeas(list);
-    if (list.length > 0) {
-      setSelectedIdeaId(list[0].id);
-    }
   }, []);
 
   const isReviewer = userRole === "Reviewer";
-  const selectedIdea = ideas.find((i) => String(i.id) === String(selectedIdeaId)) || ideas[0] || null;
+  const selectedIdea = ideas.find((i) => String(i.id) === String(selectedIdeaId)) || null;
 
   // OVERALL RULE: IF ANY REJECTED => OVERALL REJECTED. ACCEPTED ONLY WHEN ALL 3 ARE APPROVED!
   const isBizApproved = bizRecommendation === "Approve";
@@ -220,7 +121,7 @@ function FeasibilityReview() {
       }
 
       const newStatus = "Feasibility Approved";
-      const notes = `Business Review (${bizReviewer}): Approved. Functional Review (${funcReviewer}): Approved. Technical Review (${techReviewer}): Approved. Overall Status: Feasibility Approved & Sent to BA Pipeline.`;
+      const notes = `Business Review (${bizReviewer}): Approved. Functional Review (${funcReviewer}): Approved. Technical Review (${techReviewer}): Approved. Solution: ${techSolutionType}, Stack: ${techStack}, Complexity: ${techComplexity}.`;
 
       updateIdeaStatus(selectedIdea.id, newStatus, notes);
       setIdeas(getSubmittedIdeas());
@@ -240,13 +141,13 @@ function FeasibilityReview() {
     }
   };
 
-  const isPassed = selectedIdea?.status.includes("Feasibility Approved") || selectedIdea?.status.includes("Approved by BA") || selectedIdea?.status.includes("Accepted by PM");
-  const isRejected = selectedIdea?.status.includes("Not ") || selectedIdea?.status.includes("Rejected");
+  const isPassed = selectedIdea?.status?.includes("Feasibility Approved") || selectedIdea?.status?.includes("Approved by BA") || selectedIdea?.status?.includes("Accepted by PM");
+  const isRejected = selectedIdea?.status?.includes("Not ") || selectedIdea?.status?.includes("Rejected");
 
   return (
     <div className="dashboard-wrapper">
       {/* Header Banner */}
-      <div className="dashboard-header-flex">
+      <div className="dashboard-header-flex" style={{ marginBottom: "20px" }}>
         <div className="dash-title-box">
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <h1>Feasibility Review Workspace (Three Parallel Reviews)</h1>
@@ -256,63 +157,84 @@ function FeasibilityReview() {
           </div>
           <p>
             {isReviewer
-              ? "Reviewer Evaluator Mode: Perform Business, Functional, and Technical feasibility assessments."
+              ? "Reviewer Evaluator Mode: Select proposal from top dropdown and perform feasibility assessments."
               : `Status Monitoring Mode (${userRole}): View live feasibility review status.`}
           </p>
         </div>
       </div>
 
-      <div className="screening-layout-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2.5fr", gap: "20px" }}>
-        {/* Left Column: Proposals Queue */}
-        <Card title={`Assigned Proposals (${ideas.length})`} subtitle="Select proposal to view feasibility status">
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {ideas.length === 0 ? (
-              <div className="empty-state-flex" style={{ padding: "20px 0" }}>
-                <Inbox size={32} color="var(--text-light)" />
-                <span className="empty-state-title">No proposals in review queue</span>
-              </div>
-            ) : (
-              ideas.map((item) => {
-                const isSelected = selectedIdea && String(selectedIdea.id) === String(item.id);
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedIdeaId(item.id)}
-                    className={`screening-queue-item ${isSelected ? "active" : ""}`}
-                    style={{
-                      padding: "12px",
-                      borderRadius: "8px",
-                      border: isSelected ? "2px solid #6366f1" : "1px solid #e2e8f0",
-                      background: isSelected ? "#e0e7ff" : "#ffffff",
-                      cursor: "pointer"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                      <span style={{ fontSize: "10px", fontWeight: "800", background: "#4f46e5", color: "#ffffff", padding: "1px 6px", borderRadius: "4px" }}>
-                        IDEA-{item.id}
-                      </span>
-                      <span className="category-chip">{item.category}</span>
-                    </div>
-                    <div style={{ fontWeight: "700", fontSize: "13px", color: "#1e293b", marginBottom: "4px" }}>{item.title}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px" }}>
-                      <span style={{ color: "#64748b" }}>By {item.author}</span>
-                      <span className="table-badge badge-approved">{item.status}</span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+      {/* TOP PROPOSAL SELECTOR DROPDOWN BAR */}
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1.5px solid #c7d2fe",
+          padding: "16px 20px",
+          borderRadius: "14px",
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          justify: "space-between",
+          gap: "20px",
+          boxShadow: "0 4px 14px rgba(79, 70, 229, 0.08)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1 }}>
+          <label style={{ fontSize: "14px", fontWeight: "800", color: "#1e293b", whiteSpace: "nowrap" }}>
+            Select Assigned Proposal for Review:
+          </label>
+          <select
+            className="custom-input-elem"
+            value={selectedIdeaId || ""}
+            onChange={(e) => setSelectedIdeaId(e.target.value)}
+            style={{
+              flex: 1,
+              fontWeight: "700",
+              fontSize: "14px",
+              color: selectedIdeaId ? "#4f46e5" : "#64748b",
+              background: "#eeeffe",
+              border: "1.5px solid #4f46e5",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              cursor: "pointer"
+            }}
+          >
+            <option value="">Select Your Idea</option>
+            {ideas.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title} ({item.category}) — By {item.author} [{item.status}]
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedIdea && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span className="table-badge badge-approved" style={{ fontSize: "12px", padding: "6px 14px" }}>
+              {selectedIdea.status}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* WORKSPACE CONTENT AREA */}
+      {!selectedIdea ? (
+        <Card title="Feasibility Review Workspace" subtitle="Please select your idea to evaluate">
+          <div style={{ padding: "48px 24px", textAlign: "center", background: "#ffffff", borderRadius: "12px" }}>
+            <Inbox size={48} color="#4f46e5" style={{ marginBottom: "14px" }} />
+            <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#1e293b", marginBottom: "8px" }}>Select Your Idea</h3>
+            <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "480px", margin: "0 auto" }}>
+              Please select an idea from the dropdown above to view or perform the feasibility review.
+            </p>
           </div>
         </Card>
-
-        {/* Right Column: 3 Parallel Reviews Workspace */}
-        <div>
+      ) : (
+        <div style={{ marginBottom: "28px" }}>
           <Card
-            title={selectedIdea ? `Three Parallel Reviews: ${selectedIdea.title}` : "Select a Proposal"}
+            title={`Three Parallel Reviews: ${selectedIdea.title}`}
             subtitle={isReviewer ? "Evaluate business, functional, and technical dimensions" : "Review feasibility status and recommendations"}
           >
             {/* 3 Review Section Navigation Pills */}
-            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+            <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
               {[
                 { id: "business", label: "A. Business Review", icon: Briefcase, status: isBizApproved ? "Feasible" : "Not Business Feasible" },
                 { id: "functional", label: "B. Functional Review", icon: Workflow, status: isFuncApproved ? "Feasible" : "Not Functionally Feasible" },
@@ -329,32 +251,32 @@ function FeasibilityReview() {
                     onClick={() => setActiveTab(tab.id)}
                     style={{
                       flex: 1,
-                      background: isSelected ? "#4f46e5" : "#f1f5f9",
+                      background: isSelected ? "#4f46e5" : "#f8fafc",
                       color: isSelected ? "#ffffff" : "#475569",
-                      border: "none",
-                      padding: "10px 14px",
+                      border: isSelected ? "1.5px solid #4f46e5" : "1.5px solid #e2e8f0",
+                      padding: "12px 16px",
                       borderRadius: "10px",
-                      fontSize: "12px",
+                      fontSize: "14px",
                       fontWeight: "700",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
-                      boxShadow: isSelected ? "0 4px 12px rgba(79, 70, 229, 0.25)" : "none"
+                      justify: "space-between",
+                      boxShadow: isSelected ? "0 4px 14px rgba(79, 70, 229, 0.25)" : "none"
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Icon size={16} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Icon size={18} />
                       <span>{tab.label}</span>
                     </div>
 
                     <span
                       style={{
-                        fontSize: "10px",
+                        fontSize: "11px",
                         fontWeight: "800",
-                        padding: "2px 8px",
-                        borderRadius: "10px",
+                        padding: "3px 10px",
+                        borderRadius: "12px",
                         background: isApproved ? (isSelected ? "#22c55e" : "#dcfce7") : (isSelected ? "#ef4444" : "#fee2e2"),
                         color: isApproved ? (isSelected ? "#ffffff" : "#15803d") : (isSelected ? "#ffffff" : "#b91c1c")
                       }}
@@ -368,257 +290,507 @@ function FeasibilityReview() {
 
             {/* SECTION A: BUSINESS REVIEW */}
             {activeTab === "business" && (
-              isReviewer ? (
-                /* INTERACTIVE REVIEWER FORM WITH RADIO BOXES */
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ background: "#e0e7ff", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#3730a3" }}>
-                    Reviewer Role: Business Head ({bizReviewer})
-                  </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ background: "#eeeffe", border: "1px solid #c7d2fe", padding: "12px 16px", borderRadius: "8px", fontSize: "14px", fontWeight: "700", color: "#3730a3" }}>
+                  Assigned Business Evaluator: {bizReviewer}
+                </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                    <RadioYesNo label="Business Need" value={bizNeed} onChange={setBizNeed} />
-                    <RadioYesNo label="ROI Potential" value={bizRoi} onChange={setBizRoi} />
-                    <RadioYesNo label="Market Opportunity" value={bizMarketOpp} onChange={setBizMarketOpp} />
-                    <RadioYesNo label="Competitive Advantage" value={bizCompAdvantage} onChange={setBizCompAdvantage} />
-                    <RadioYesNo label="Strategic Alignment" value={bizStrategicAlignment} onChange={setBizStrategicAlignment} />
-                    <RadioYesNo label="Customer Demand" value={bizCustomerDemand} onChange={setBizCustomerDemand} />
-                    <RadioYesNo label="Revenue Potential" value={bizRevenuePotential} onChange={setBizRevenuePotential} />
-                    <RadioLevel label="Priority Score" value={bizPriorityScore} onChange={setBizPriorityScore} options={["Low", "Medium", "High"]} />
-                  </div>
-
-                  <div className="input-field-group" style={{ marginTop: "6px" }}>
-                    <label className="input-label">Business Review Comments</label>
-                    <textarea
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div className="input-field-group">
+                    <label className="input-label">Expected benefits</label>
+                    <input
+                      type="text"
                       className="custom-input-elem"
-                      rows={2}
-                      placeholder="Enter strategic business observations..."
-                      value={bizComments}
-                      onChange={(e) => setBizComments(e.target.value)}
-                    ></textarea>
+                      placeholder="Enter expected business benefits..."
+                      value={bizExpectedBenefits}
+                      onChange={(e) => setBizExpectedBenefits(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
 
-                  <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "12px 16px", borderRadius: "10px", marginTop: "4px" }}>
-                    <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
-                      Business Recommendation *
-                    </label>
-                    <div style={{ display: "flex", gap: "20px" }}>
-                      {["Approve", "Reject", "Clarify"].map((opt) => (
-                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
-                          <input
-                            type="radio"
-                            name="bizRecommendation"
-                            value={opt}
-                            checked={bizRecommendation === opt}
-                            onChange={() => setBizRecommendation(opt)}
-                          />
-                          {opt === "Approve" ? "Approve Business Feasibility" : opt === "Reject" ? "Reject Business Feasibility" : "Request Clarification"}
-                        </label>
-                      ))}
-                    </div>
+                  <div className="input-field-group">
+                    <label className="input-label">Cost savings (estimated)</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. $50,000 / year or 20% cost reduction"
+                      value={bizCostSavings}
+                      onChange={(e) => setBizCostSavings(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Efforts savings</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. 15 hours / week per employee"
+                      value={bizEffortsSavings}
+                      onChange={(e) => setBizEffortsSavings(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Productivity improvement</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter productivity impact details..."
+                      value={bizProductivityImprovement}
+                      onChange={(e) => setBizProductivityImprovement(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Quality improvement</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter quality enhancements..."
+                      value={bizQualityImprovement}
+                      onChange={(e) => setBizQualityImprovement(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Customer/user experience</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter CX/UX impact..."
+                      value={bizCustomerUserExp}
+                      onChange={(e) => setBizCustomerUserExp(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Compliance or risk reduction</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter compliance or risk details..."
+                      value={bizComplianceRiskReduction}
+                      onChange={(e) => setBizComplianceRiskReduction(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Aligns with company strategy?</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. Yes, aligns with Q3 Automation Goals"
+                      value={bizCompanyStrategyAlign}
+                      onChange={(e) => setBizCompanyStrategyAlign(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Regulatory requirement?</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. GDPR, ISO27001, or N/A"
+                      value={bizRegulatoryReq}
+                      onChange={(e) => setBizRegulatoryReq(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Expected ROI</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. 250% ROI over 12 months"
+                      value={bizExpectedRoi}
+                      onChange={(e) => setBizExpectedRoi(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Risks if implemented</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter implementation risks..."
+                      value={bizRisksIfImplemented}
+                      onChange={(e) => setBizRisksIfImplemented(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Risks if not implemented</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter non-implementation opportunity loss risks..."
+                      value={bizRisksIfNotImplemented}
+                      onChange={(e) => setBizRisksIfNotImplemented(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
                 </div>
-              ) : (
-                /* CLEAN NON-REVIEWER STATUS CARD VIEW (NO RADIO BOXES) */
-                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "18px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
-                      Business Feasibility Status
-                    </h3>
-                    <span style={{ fontSize: "13px", padding: "4px 14px", borderRadius: "14px", fontWeight: "800", background: isBizApproved ? "#dcfce7" : "#fee2e2", color: isBizApproved ? "#15803d" : "#b91c1c" }}>
-                      {isBizApproved ? "● Business Feasible (Approved)" : "● Not Business Feasible"}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "13px", color: "#475569" }}>
-                    Assigned Business Evaluator: <strong>{bizReviewer}</strong>
-                  </div>
-                  <div style={{ fontSize: "13px", background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", color: "#334155" }}>
-                    <strong>Evaluation Notes:</strong> {bizComments || "Business value, ROI potential, and strategic alignment verified by Business Evaluator."}
+
+                <div className="input-field-group">
+                  <label className="input-label">Business Review Overall Comments</label>
+                  <textarea
+                    className="custom-input-elem"
+                    rows={2}
+                    placeholder="Enter additional business review remarks..."
+                    value={bizComments}
+                    onChange={(e) => setBizComments(e.target.value)}
+                    disabled={!isReviewer}
+                  ></textarea>
+                </div>
+
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "14px 18px", borderRadius: "10px" }}>
+                  <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
+                    Business Recommendation *
+                  </label>
+                  <div style={{ display: "flex", gap: "24px" }}>
+                    {["Approve", "Reject", "Clarify"].map((opt) => (
+                      <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: isReviewer ? "pointer" : "default", fontSize: "14px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
+                        <input
+                          type="radio"
+                          name="bizRecommendation"
+                          value={opt}
+                          checked={bizRecommendation === opt}
+                          onChange={() => setBizRecommendation(opt)}
+                          disabled={!isReviewer}
+                        />
+                        {opt === "Approve" ? "Approve Business Feasibility" : opt === "Reject" ? "Reject Business Feasibility" : "Request Clarification"}
+                      </label>
+                    ))}
                   </div>
                 </div>
-              )
+              </div>
             )}
 
             {/* SECTION B: FUNCTIONAL REVIEW */}
             {activeTab === "functional" && (
-              isReviewer ? (
-                /* INTERACTIVE REVIEWER FORM WITH RADIO BOXES */
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ background: "#cff4fc", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#055160" }}>
-                    Reviewer Role: Business Analyst ({funcReviewer})
-                  </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ background: "#e0f2fe", border: "1px solid #7dd3fc", padding: "12px 16px", borderRadius: "8px", fontSize: "14px", fontWeight: "700", color: "#0369a1" }}>
+                  Assigned Functional Evaluator: {funcReviewer}
+                </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                    <RadioYesNo label="Requirements Clear?" value={funcReqClear} onChange={setFuncReqClear} />
-                    <RadioYesNo label="Process Defined?" value={funcProcessDefined} onChange={setFuncProcessDefined} />
-                    <RadioYesNo label="Users Identified?" value={funcUsersIdentified} onChange={setFuncUsersIdentified} />
-                    <RadioYesNo label="Workflow Complete?" value={funcWorkflowComplete} onChange={setFuncWorkflowComplete} />
-                    <RadioYesNo label="Compliance Considered?" value={funcComplianceConsidered} onChange={setFuncComplianceConsidered} />
-                    <RadioYesNo label="Dependencies Present?" value={funcDependencies} onChange={setFuncDependencies} />
-                    <RadioYesNo label="Integration Required?" value={funcIntegrationRequired} onChange={setFuncIntegrationRequired} />
-                    <RadioYesNo label="Gap Analysis Performed?" value={funcGapAnalysis} onChange={setFuncGapAnalysis} />
-                    <RadioLevel label="Functional Complexity" value={funcComplexity} onChange={setFuncComplexity} options={["Low", "Medium", "High"]} />
-                  </div>
-
-                  <div className="input-field-group" style={{ marginTop: "6px" }}>
-                    <label className="input-label">Functional Review Comments</label>
-                    <textarea
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div className="input-field-group">
+                    <label className="input-label">New functionality or Old</label>
+                    <input
+                      type="text"
                       className="custom-input-elem"
-                      rows={2}
-                      placeholder="Enter operational workflow notes..."
-                      value={funcComments}
-                      onChange={(e) => setFuncComments(e.target.value)}
-                    ></textarea>
+                      placeholder="e.g. Completely New Module or Enhancing Existing Workflow"
+                      value={funcNewOrOld}
+                      onChange={(e) => setFuncNewOrOld(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
 
-                  <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "12px 16px", borderRadius: "10px", marginTop: "4px" }}>
-                    <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
-                      Functional Recommendation *
-                    </label>
-                    <div style={{ display: "flex", gap: "20px" }}>
-                      {["Approve", "Reject", "Clarify"].map((opt) => (
-                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
-                          <input
-                            type="radio"
-                            name="funcRecommendation"
-                            value={opt}
-                            checked={funcRecommendation === opt}
-                            onChange={() => setFuncRecommendation(opt)}
-                          />
-                          {opt === "Approve" ? "Approve Functional Feasibility" : opt === "Reject" ? "Reject Functional Feasibility" : "Request Clarification"}
-                        </label>
-                      ))}
-                    </div>
+                  <div className="input-field-group">
+                    <label className="input-label">Number of users affected</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. 500+ Internal Staff or 10,000 Customers"
+                      value={funcUsersAffected}
+                      onChange={(e) => setFuncUsersAffected(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Change management required</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. User Training Needed, Process SOP Update"
+                      value={funcChangeManagementReq}
+                      onChange={(e) => setFuncChangeManagementReq(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Process impact</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. Automates manual data entry in Billing"
+                      value={funcProcessImpact}
+                      onChange={(e) => setFuncProcessImpact(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group" style={{ gridColumn: "span 2" }}>
+                    <label className="input-label">Operational Risk</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter operational risks or downtime concerns..."
+                      value={funcOperationalRisk}
+                      onChange={(e) => setFuncOperationalRisk(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
                 </div>
-              ) : (
-                /* CLEAN NON-REVIEWER STATUS CARD VIEW (NO RADIO BOXES) */
-                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "18px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
-                      Functional Feasibility Status
-                    </h3>
-                    <span style={{ fontSize: "13px", padding: "4px 14px", borderRadius: "14px", fontWeight: "800", background: isFuncApproved ? "#dcfce7" : "#fee2e2", color: isFuncApproved ? "#15803d" : "#b91c1c" }}>
-                      {isFuncApproved ? "● Functional Feasible (Approved)" : "● Not Functionally Feasible"}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "13px", color: "#475569" }}>
-                    Assigned Functional Evaluator: <strong>{funcReviewer}</strong>
-                  </div>
-                  <div style={{ fontSize: "13px", background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", color: "#334155" }}>
-                    <strong>Evaluation Notes:</strong> {funcComments || "Operational workflow fit, end-user adoption, and compliance verified by Business Analyst."}
+
+                <div className="input-field-group">
+                  <label className="input-label">Functional Review Overall Comments</label>
+                  <textarea
+                    className="custom-input-elem"
+                    rows={2}
+                    placeholder="Enter operational workflow remarks..."
+                    value={funcComments}
+                    onChange={(e) => setFuncComments(e.target.value)}
+                    disabled={!isReviewer}
+                  ></textarea>
+                </div>
+
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "14px 18px", borderRadius: "10px" }}>
+                  <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
+                    Functional Recommendation *
+                  </label>
+                  <div style={{ display: "flex", gap: "24px" }}>
+                    {["Approve", "Reject", "Clarify"].map((opt) => (
+                      <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: isReviewer ? "pointer" : "default", fontSize: "14px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
+                        <input
+                          type="radio"
+                          name="funcRecommendation"
+                          value={opt}
+                          checked={funcRecommendation === opt}
+                          onChange={() => setFuncRecommendation(opt)}
+                          disabled={!isReviewer}
+                        />
+                        {opt === "Approve" ? "Approve Functional Feasibility" : opt === "Reject" ? "Reject Functional Feasibility" : "Request Clarification"}
+                      </label>
+                    ))}
                   </div>
                 </div>
-              )
+              </div>
             )}
 
             {/* SECTION C: TECHNICAL REVIEW */}
             {activeTab === "technical" && (
-              isReviewer ? (
-                /* INTERACTIVE REVIEWER FORM WITH RADIO BOXES */
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ background: "#dcfce7", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#15803d" }}>
-                    Reviewer Role: Technical Architect ({techReviewer})
-                  </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ background: "#dcfce7", border: "1px solid #86efac", padding: "12px 16px", borderRadius: "8px", fontSize: "14px", fontWeight: "700", color: "#15803d" }}>
+                  Assigned Technical Evaluator: {techReviewer}
+                </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                    <RadioYesNo label="Technology Fit" value={techFit} onChange={setTechFit} />
-                    <RadioYesNo label="Existing Platform Reuse" value={techPlatformReuse} onChange={setTechPlatformReuse} />
-                    <RadioYesNo label="Security & Compliance" value={techSecurity} onChange={setTechSecurity} />
-                    <RadioYesNo label="Performance Expectations" value={techPerformance} onChange={setTechPerformance} />
-                    <RadioYesNo label="Scalability Potential" value={techScalability} onChange={setTechScalability} />
-                    <RadioYesNo label="Cloud Readiness" value={techCloudReadiness} onChange={setTechCloudReadiness} />
-                    <RadioYesNo label="API Availability" value={techApiAvailability} onChange={setTechApiAvailability} />
-                    <RadioYesNo label="Infrastructure Impact" value={techInfraImpact} onChange={setTechInfraImpact} />
-                    <RadioLevel label="Integration Complexity" value={techIntegrationComplexity} onChange={setTechIntegrationComplexity} options={["Low", "Medium", "High"]} />
-                    <RadioLevel label="Technical Risks" value={techRisks} onChange={setTechRisks} options={["Low", "Medium", "High"]} />
-                    <RadioLevel label="Estimated Complexity" value={techEstComplexity} onChange={setTechEstComplexity} options={["Low", "Medium", "High"]} />
-                  </div>
-
-                  <div className="input-field-group" style={{ marginTop: "6px" }}>
-                    <label className="input-label">Technical Review Comments</label>
-                    <textarea
-                      className="custom-input-elem"
-                      rows={2}
-                      placeholder="Enter architecture observations, API specifications..."
-                      value={techComments}
-                      onChange={(e) => setTechComments(e.target.value)}
-                    ></textarea>
-                  </div>
-
-                  <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "12px 16px", borderRadius: "10px", marginTop: "4px" }}>
-                    <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
-                      Technical Recommendation *
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "16px", borderRadius: "10px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+                  <div className="input-field-group">
+                    <label className="input-label" style={{ fontWeight: "800", color: "#4f46e5" }}>
+                      Solution type
                     </label>
-                    <div style={{ display: "flex", gap: "20px" }}>
-                      {["Approve", "Reject", "Clarify"].map((opt) => (
-                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
-                          <input
-                            type="radio"
-                            name="techRecommendation"
-                            value={opt}
-                            checked={techRecommendation === opt}
-                            onChange={() => setTechRecommendation(opt)}
-                          />
-                          {opt === "Approve" ? "Approve Technical Feasibility" : opt === "Reject" ? "Reject Technical Feasibility" : "Request Clarification"}
-                        </label>
-                      ))}
-                    </div>
+                    <select
+                      className="custom-input-elem"
+                      value={techSolutionType}
+                      onChange={(e) => setTechSolutionType(e.target.value)}
+                      disabled={!isReviewer}
+                      style={{ fontWeight: "600" }}
+                    >
+                      <option value="Web Application">Web Application</option>
+                      <option value="Mobile Application">Mobile Application</option>
+                      <option value="Microservice / API">Microservice / API</option>
+                      <option value="Automation Script / Bot">Automation Script / Bot</option>
+                      <option value="Cloud Service / SaaS">Cloud Service / SaaS</option>
+                      <option value="Internal Enterprise Tool">Internal Enterprise Tool</option>
+                      <option value="Legacy System Enhancement">Legacy System Enhancement</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label" style={{ fontWeight: "800", color: "#4f46e5" }}>
+                      Tech Stack 
+                    </label>
+                    <select
+                      className="custom-input-elem"
+                      value={techStack}
+                      onChange={(e) => setTechStack(e.target.value)}
+                      disabled={!isReviewer}
+                      style={{ fontWeight: "600" }}
+                    >
+                      <option value="React / Node.js / PostgreSQL">React / Node.js / PostgreSQL</option>
+                      <option value="Python / FastAPI / SQLite">Python / FastAPI / SQLite</option>
+                      <option value="Java / Spring Boot / Oracle">Java / Spring Boot / Oracle</option>
+                      <option value=".NET Core / C# / SQL Server">.NET Core / C# / SQL Server</option>
+                      <option value="Angular / Express / MongoDB">Angular / Express / MongoDB</option>
+                      <option value="Vue.js / Django / MySQL">Vue.js / Django / MySQL</option>
+                      <option value="Custom Enterprise Stack">Custom Enterprise Stack</option>
+                    </select>
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label" style={{ fontWeight: "800", color: "#4f46e5" }}>
+                      Tech complexityf
+                    </label>
+                    <select
+                      className="custom-input-elem"
+                      value={techComplexity}
+                      onChange={(e) => setTechComplexity(e.target.value)}
+                      disabled={!isReviewer}
+                      style={{ fontWeight: "600" }}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Very High">Very High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
                   </div>
                 </div>
-              ) : (
-                /* CLEAN NON-REVIEWER STATUS CARD VIEW (NO RADIO BOXES) */
-                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "18px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
-                      Technical Feasibility Status
-                    </h3>
-                    <span style={{ fontSize: "13px", padding: "4px 14px", borderRadius: "14px", fontWeight: "800", background: isTechApproved ? "#dcfce7" : "#fee2e2", color: isTechApproved ? "#15803d" : "#b91c1c" }}>
-                      {isTechApproved ? "● Technical Feasible (Approved)" : "● Not Technically Feasible"}
-                    </span>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div className="input-field-group">
+                    <label className="input-label">Data Assessment</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter data volume, storage & migration details..."
+                      value={techDataAssessment}
+                      onChange={(e) => setTechDataAssessment(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
-                  <div style={{ fontSize: "13px", color: "#475569" }}>
-                    Assigned Technical Evaluator: <strong>{techReviewer}</strong>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Infra</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. AWS Cloud / On-Prem Kubernetes Server"
+                      value={techInfra}
+                      onChange={(e) => setTechInfra(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
-                  <div style={{ fontSize: "13px", background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", color: "#334155" }}>
-                    <strong>Evaluation Notes:</strong> {techComments || "Architecture stack compatibility, API security, and scalability verified by Technical Architect."}
+
+                  <div className="input-field-group">
+                    <label className="input-label">Integration Requirement</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. REST APIs, SAP ERP, Salesforce Integration"
+                      value={techIntegrationReq}
+                      onChange={(e) => setTechIntegrationReq(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Tech Risks</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter technical architecture or vendor lock-in risks..."
+                      value={techRisks}
+                      onChange={(e) => setTechRisks(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Dev + QA Efforts</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="e.g. 4 Sprints / 120 Man-Days"
+                      value={techDevQaEfforts}
+                      onChange={(e) => setTechDevQaEfforts(e.target.value)}
+                      disabled={!isReviewer}
+                    />
+                  </div>
+
+                  <div className="input-field-group">
+                    <label className="input-label">Security Concerns</label>
+                    <input
+                      type="text"
+                      className="custom-input-elem"
+                      placeholder="Enter security compliance & encryption requirements..."
+                      value={techSecurityConcerns}
+                      onChange={(e) => setTechSecurityConcerns(e.target.value)}
+                      disabled={!isReviewer}
+                    />
                   </div>
                 </div>
-              )
+
+                <div className="input-field-group">
+                  <label className="input-label">Technical Review Overall Comments</label>
+                  <textarea
+                    className="custom-input-elem"
+                    rows={2}
+                    placeholder="Enter architecture observations, API specifications..."
+                    value={techComments}
+                    onChange={(e) => setTechComments(e.target.value)}
+                    disabled={!isReviewer}
+                  ></textarea>
+                </div>
+
+                <div style={{ background: "#f8fafc", border: "1.5px solid #cbd5e1", padding: "14px 18px", borderRadius: "10px" }}>
+                  <label className="input-label" style={{ fontWeight: "800", color: "#1e293b", marginBottom: "8px", display: "block" }}>
+                    Technical Recommendation *
+                  </label>
+                  <div style={{ display: "flex", gap: "24px" }}>
+                    {["Approve", "Reject", "Clarify"].map((opt) => (
+                      <label key={opt} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: isReviewer ? "pointer" : "default", fontSize: "14px", fontWeight: "700", color: opt === "Approve" ? "#16a34a" : opt === "Reject" ? "#dc2626" : "#d97706" }}>
+                        <input
+                          type="radio"
+                          name="techRecommendation"
+                          value={opt}
+                          checked={techRecommendation === opt}
+                          onChange={() => setTechRecommendation(opt)}
+                          disabled={!isReviewer}
+                        />
+                        {opt === "Approve" ? "Approve Technical Feasibility" : opt === "Reject" ? "Reject Technical Feasibility" : "Request Clarification"}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* OVERALL FEASIBILITY ACTION & EVALUATION STATUS */}
-            <div className="screening-decision-box" style={{ marginTop: "24px", paddingTop: "16px", borderTop: "2px solid #e2e8f0" }}>
-              <h4 style={{ fontSize: "15px", fontWeight: "800", marginBottom: "10px", color: "var(--text-dark)" }}>
+            <div className="screening-decision-box" style={{ marginTop: "24px", paddingTop: "20px", borderTop: "2px solid #e2e8f0" }}>
+              <h4 style={{ fontSize: "15px", fontWeight: "800", marginBottom: "12px", color: "#0f172a" }}>
                 Three Parallel Reviews Summary & Status Breakdown
               </h4>
 
-              {/* 3 Review Cards Status Summary */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
-                <div style={{ padding: "10px", borderRadius: "8px", background: isBizApproved ? "#f0fdf4" : "#fef2f2", border: isBizApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
-                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>A. BUSINESS REVIEW</div>
-                  <div style={{ fontSize: "12px", fontWeight: "800", color: isBizApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "18px" }}>
+                <div style={{ padding: "12px", borderRadius: "8px", background: isBizApproved ? "#f0fdf4" : "#fef2f2", border: isBizApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "800", color: "#64748b" }}>A. BUSINESS REVIEW</div>
+                  <div style={{ fontSize: "13px", fontWeight: "800", color: isBizApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
                     {isBizApproved ? "Feasible" : "Not Business Feasible"}
                   </div>
                 </div>
 
-                <div style={{ padding: "10px", borderRadius: "8px", background: isFuncApproved ? "#f0fdf4" : "#fef2f2", border: isFuncApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
-                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>B. FUNCTIONAL REVIEW</div>
-                  <div style={{ fontSize: "12px", fontWeight: "800", color: isFuncApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
+                <div style={{ padding: "12px", borderRadius: "8px", background: isFuncApproved ? "#f0fdf4" : "#fef2f2", border: isFuncApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "800", color: "#64748b" }}>B. FUNCTIONAL REVIEW</div>
+                  <div style={{ fontSize: "13px", fontWeight: "800", color: isFuncApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
                     {isFuncApproved ? "Feasible" : "Not Functionally Feasible"}
                   </div>
                 </div>
 
-                <div style={{ padding: "10px", borderRadius: "8px", background: isTechApproved ? "#f0fdf4" : "#fef2f2", border: isTechApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
-                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>C. TECHNICAL REVIEW</div>
-                  <div style={{ fontSize: "12px", fontWeight: "800", color: isTechApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
+                <div style={{ padding: "12px", borderRadius: "8px", background: isTechApproved ? "#f0fdf4" : "#fef2f2", border: isTechApproved ? "1px solid #bbf7d0" : "1px solid #fecaca" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "800", color: "#64748b" }}>C. TECHNICAL REVIEW</div>
+                  <div style={{ fontSize: "13px", fontWeight: "800", color: isTechApproved ? "#16a34a" : "#dc2626", marginTop: "2px" }}>
                     {isTechApproved ? "Feasible" : "Not Technically Feasible"}
                   </div>
                 </div>
               </div>
 
-              {/* OVERALL STATUS NOTIFICATION */}
               {isAnyRejected ? (
-                <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", padding: "14px", borderRadius: "10px", marginBottom: "14px" }}>
+                <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", padding: "14px", borderRadius: "10px", marginBottom: "16px" }}>
                   <div style={{ fontWeight: "800", color: "#dc2626", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
                     <XCircle size={18} /> OVERALL FEASIBILITY REJECTED
                   </div>
@@ -627,7 +799,7 @@ function FeasibilityReview() {
                   </p>
                 </div>
               ) : allThreeApproved ? (
-                <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", padding: "14px", borderRadius: "10px", marginBottom: "14px" }}>
+                <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", padding: "14px", borderRadius: "10px", marginBottom: "16px" }}>
                   <div style={{ fontWeight: "800", color: "#16a34a", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
                     <CheckCircle2 size={18} /> ALL 3 REVIEWS APPROVED (FEASIBLE)
                   </div>
@@ -637,7 +809,6 @@ function FeasibilityReview() {
                 </div>
               ) : null}
 
-              {/* ACTION BUTTONS FOR ASSIGNED REVIEWERS VS CLEAN STATUS VIEW FOR OTHERS */}
               {isReviewer ? (
                 isPassed ? (
                   <div style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", padding: "14px", borderRadius: "8px", fontWeight: "700", textAlign: "center" }}>
@@ -682,7 +853,7 @@ function FeasibilityReview() {
             </div>
           </Card>
         </div>
-      </div>
+      )}
     </div>
   );
 }

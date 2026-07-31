@@ -451,9 +451,6 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                       <tr key={idea.id}>
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "10px", fontWeight: "800", background: "#4f46e5", color: "#ffffff", padding: "1px 6px", borderRadius: "4px" }}>
-                              IDEA-{idea.id}
-                            </span>
                             <span className="table-idea-title">{idea.title}</span>
                           </div>
                         </td>

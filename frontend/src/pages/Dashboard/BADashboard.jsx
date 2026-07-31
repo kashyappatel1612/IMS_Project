@@ -320,9 +320,6 @@ function BADashboard({ userName = "Business Analyst" }) {
                   <tr key={item.id}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontSize: "10px", fontWeight: "800", background: "#4f46e5", color: "#ffffff", padding: "1px 6px", borderRadius: "4px" }}>
-                          IDEA-{item.id}
-                        </span>
                         <span className="table-idea-title">{item.title}</span>
                       </div>
                     </td>

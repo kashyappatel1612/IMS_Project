@@ -388,7 +388,7 @@ function BusinessAnalysis() {
                     style={{ fontSize: "14px", fontWeight: "600" }}
                     required
                   >
-                    <option value="">-- Choose Proposal (Feasibility Passed) --</option>
+                    <option value="">Select Your Idea</option>
                     {feasibleIdeas.length === 0 ? (
                       <option value="" disabled>
                         -- No proposals currently passed Stage 2 Feasibility Review --
