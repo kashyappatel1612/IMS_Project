@@ -163,25 +163,13 @@ def init_tables():
         );
     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS notifications (
-            id SERIAL PRIMARY KEY,
-            recipient_user_id INTEGER,
-            recipient_email VARCHAR(255),
-            recipient_role VARCHAR(100),
-            title VARCHAR(500) NOT NULL,
-            message TEXT NOT NULL,
-            idea_id BIGINT,
-            type VARCHAR(100) DEFAULT 'allocation',
-            is_read BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
+    # Explicitly drop notifications table from PostgreSQL schema as requested
+    cursor.execute("DROP TABLE IF EXISTS notifications CASCADE;")
 
     conn.commit()
     cursor.close()
     conn.close()
-    print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports, evaluators, idea_assignments, notifications) Verified!")
+    print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports, evaluators, idea_assignments) Verified!")
     # Auto seed master evaluators & sample role users
     seed_evaluators()
     seed_users()
@@ -1051,14 +1039,6 @@ def create_assignment_in_db(idea_id: int, assigned_role: str, assigned_user_id: 
     idea_row = cursor.fetchone()
     idea_title = idea_row[0] if idea_row else f"IDEA-{idea_id}"
 
-    # Create in-app Notification for assigned user
-    notif_msg = f"You have been assigned {assigned_role} for Idea IDEA-{idea_id}: '{idea_title}'. Remarks: {remarks or 'None'}"
-    cursor.execute(
-        """INSERT INTO notifications (recipient_user_id, recipient_email, recipient_role, title, message, idea_id, type)
-           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-        (assigned_user_id, user_email, assigned_role, f"🎯 New Assignment: IDEA-{idea_id}", notif_msg, idea_id, "assignment")
-    )
-
     conn.commit()
     cursor.close()
     conn.close()
@@ -1145,40 +1125,5 @@ def get_assignment_history_in_db(idea_id: int):
     return history
 
 def get_notifications_in_db(user_id: int, user_email: str, user_role: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """SELECT id, recipient_user_id, recipient_email, recipient_role, title, message, idea_id, type, is_read, created_at
-           FROM notifications
-           WHERE recipient_user_id = %s
-              OR (recipient_email IS NOT NULL AND LOWER(recipient_email) = %s)
-              OR (recipient_role IS NOT NULL AND LOWER(recipient_role) = %s)
-           ORDER BY created_at DESC LIMIT 50""",
-        (user_id, user_email.lower(), user_role.lower())
-    )
-
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
-    list_res = []
-    unread_cnt = 0
-    for r in rows:
-        is_r = bool(r[8])
-        if not is_r:
-            unread_cnt += 1
-        list_res.append({
-            "id": r[0],
-            "recipientUserId": r[1],
-            "recipientEmail": r[2],
-            "recipientRole": r[3],
-            "title": r[4],
-            "message": r[5],
-            "ideaId": r[6],
-            "type": r[7],
-            "isRead": is_r,
-            "createdAt": str(r[9])
-        })
-    return {"notifications": list_res, "unreadCount": unread_cnt}
+    return {"notifications": [], "unreadCount": 0}
 
