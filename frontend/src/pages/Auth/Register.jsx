@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle2, ArrowRight, RefreshCw } from "lucide-react";
+import { toast } from "react-hot-toast";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import imsLogo from "../../assets/ims-logo.jpg";
@@ -161,12 +162,9 @@ function Register() {
         navigate("/");
       }
     } catch (apiErr) {
-      console.warn("API registration notice:", apiErr.message);
+      console.error("API registration error:", apiErr.message);
       setLoading(false);
-      setIsOtpStep(true);
-      setOtpDigits(["", "", "", "", "", ""]);
-      setResendTimer(60);
-      setResendDisabled(true);
+      setError(apiErr.message || "Failed to register account. Email might already exist.");
     }
   };
 
@@ -183,13 +181,6 @@ function Register() {
 
     setLoading(true);
 
-    const localUser = {
-      username: formData.username.trim(),
-      email: formData.email.trim(),
-      role: role,
-      employeeId: ""
-    };
-
     try {
       const res = await verifyOtpApi({
         email: formData.email.trim(),
@@ -200,12 +191,12 @@ function Register() {
       if (res && res.user) {
         switchAccount(res.user, navigate);
       } else {
-        switchAccount(localUser, navigate);
+        setError("Invalid verification response from the server.");
       }
     } catch (err) {
-      console.warn("OTP Verification notice:", err.message);
+      console.error("OTP Verification error:", err.message);
       setLoading(false);
-      switchAccount(localUser, navigate);
+      setError(err.message || "Invalid or expired OTP code! Please check your email inbox.");
     }
   };
 
@@ -217,7 +208,7 @@ function Register() {
       setOtpDigits(["", "", "", "", "", ""]);
       setResendTimer(60);
       setResendDisabled(true);
-      alert(`New OTP Code sent to ${formData.email.trim()}! Check your email inbox.`);
+      toast.success(`New OTP Code sent to ${formData.email.trim()}! Check your email inbox.`);
     } catch (err) {
       setError(err.message || "Failed to resend OTP.");
     }

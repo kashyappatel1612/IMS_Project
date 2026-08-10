@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   Calendar,
   Plus,
@@ -47,7 +48,7 @@ function SprintPlanningStudio() {
     setSprints([...sprints, newS]);
     setShowAddModal(false);
     setSprintName("");
-    alert(`Sprint ${newS.id} created successfully!`);
+    toast.success(`Sprint ${newS.id} created successfully!`);
   };
 
   return (

@@ -52,7 +52,6 @@ function Sidebar({ isOpen }) {
   const adminNavItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { id: "feasibility-review", label: "Feasibility Review", icon: FileCheck, path: "/feasibility-review" },
     { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
     { id: "estimation", label: "Estimation", icon: Calculator, path: "/estimation" },
     { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
@@ -70,7 +69,6 @@ function Sidebar({ isOpen }) {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { id: "allocate-roles", label: "Allocate Roles", icon: UserCheck, path: "/reviewer-allocation" },
     { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { id: "review-monitoring", label: "Review Monitoring", icon: ShieldCheck, path: "/feasibility-review" },
     { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
     { id: "estimation", label: "Estimation", icon: Calculator, path: "/estimation" },
     { id: "project-creation", label: "Project Creation", icon: FolderKanban, path: "/projects" },
@@ -95,10 +93,9 @@ function Sidebar({ isOpen }) {
   // Dedicated Business Analyst Navigation Menu Items
   const baNavItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "assigned-ideas", label: "Assigned Ideas", icon: Lightbulb, path: "/business-analysis" },
-    { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
     { id: "brd-frd", label: "BRD / FRD Studio", icon: FileText, path: "/brd-frd" },
     { id: "documents", label: "Documents", icon: Folder, path: "/documents" },
+    { id: "analysis-reports", label: "Analysis Reports", icon: FileBarChart, path: "/analysis-reports" },
     { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
     { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
@@ -123,7 +120,6 @@ function Sidebar({ isOpen }) {
   // User Navigation Items
   const userNavItems = [
     { id: "dashboard", label: "Dashboard (My Ideas)", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "submit-idea", label: "Submit Idea", icon: Lightbulb, path: "/submit-idea" },
     { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
   ];

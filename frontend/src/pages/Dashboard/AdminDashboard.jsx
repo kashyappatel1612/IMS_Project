@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   Lightbulb,
   Clock,
@@ -40,15 +41,13 @@ function AdminDashboard({ userName }) {
   const handleApproveIdea = (id) => {
     const updated = updateIdeaStatus(id, "Sent to Initial Screening");
     setAllIdeas(updated);
-    alert(`Idea successfully Approved & Sent to Initial Screening!`);
+    toast.success(`Idea successfully Approved & Sent to Initial Screening!`);
   };
 
   const handleRejectIdea = (id) => {
-    if (window.confirm("Are you sure you want to REJECT this idea proposal?")) {
-      const updated = updateIdeaStatus(id, "Rejected", "Rejected by Admin");
-      setAllIdeas(updated);
-      alert(`Idea has been Rejected.`);
-    }
+    const updated = updateIdeaStatus(id, "Rejected", "Rejected by Admin");
+    setAllIdeas(updated);
+    toast.success(`Idea has been Rejected.`);
   };
 
   const handleViewIdea = (id) => {

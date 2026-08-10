@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -70,7 +71,7 @@ function QualityAssurance() {
   const handleSignOffQA = (e) => {
     e.preventDefault();
     if (!selectedProjectId) {
-      alert("Please select a project for QA Sign-Off!");
+      toast("Please select a project for QA Sign-Off!", { icon: "⚠️" });
       return;
     }
 

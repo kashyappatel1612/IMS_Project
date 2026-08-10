@@ -21,6 +21,19 @@ export function createNotification({ recipientRole, recipientEmail, title, messa
     const raw = localStorage.getItem("idea360Notifications");
     const current = raw ? JSON.parse(raw) : DEFAULT_SEED_NOTIFICATIONS;
 
+    // Deduplication check: skip if identical notification exists for same ideaId, recipientRole, and title
+    if (ideaId && (recipientRole || recipientEmail)) {
+      const isDuplicate = current.some(
+        (n) =>
+          String(n.ideaId) === String(ideaId) &&
+          n.title === title &&
+          ((recipientRole && n.recipientRole === recipientRole) || (recipientEmail && n.recipientEmail === recipientEmail))
+      );
+      if (isDuplicate) {
+        return current;
+      }
+    }
+
     const newNotif = {
       id: Date.now() + Math.floor(Math.random() * 1000),
       title,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import {
   Calculator,
   Clock,
@@ -123,7 +124,7 @@ function Estimation() {
   const handleSaveEstimation = (e) => {
     e.preventDefault();
     if (!selectedIdeaId) {
-      alert("Please select a proposal to estimate!");
+      toast("Please select a proposal to estimate!", { icon: "⚠️" });
       return;
     }
 

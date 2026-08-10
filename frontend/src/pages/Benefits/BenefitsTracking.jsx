@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   TrendingUp,
   Award,
@@ -69,7 +70,7 @@ function BenefitsTracking() {
   const handleSaveBenefits = (e) => {
     e.preventDefault();
     if (!selectedProjectId) {
-      alert("Please select a project to record benefits!");
+      toast("Please select a project to record benefits!", { icon: "⚠️" });
       return;
     }
 

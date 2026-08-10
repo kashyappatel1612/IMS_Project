@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   BarChart,
   FileText,
@@ -20,9 +21,10 @@ import {
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
-import { fetchAllIdeas, fetchAnalysisReports } from "../../services/api";
+import { fetchAllIdeas, fetchAnalysisReports, fetchMyAssignments } from "../../services/api";
 import {
   getSubmittedIdeas,
+  fetchIdeasFromApi,
   getSubmittedAnalysisReports,
   saveAnalysisReport
 } from "../../utils/ideaStorage";
@@ -52,19 +54,57 @@ function BADashboard({ userName = "Business Analyst" }) {
       setBaNameInput(userName);
     }
     loadData();
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("ideaStatusChanged", handleUpdate);
+    window.addEventListener("ideaAllocationChanged", handleUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("ideaStatusChanged", handleUpdate);
+      window.removeEventListener("ideaAllocationChanged", handleUpdate);
+    };
   }, [userName]);
 
   const loadData = async () => {
+    let activeEmail = "";
+    let activeName = userName;
+    const savedUserStr = localStorage.getItem("currentUser");
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        if (u.email) activeEmail = u.email;
+        if (u.username) activeName = u.username;
+      } catch (e) {}
+    }
+
+    let rawIdeas = [];
     try {
-      const backendIdeas = await fetchAllIdeas();
-      if (backendIdeas && backendIdeas.length > 0) {
-        setIdeas(backendIdeas);
+      const assigned = await fetchMyAssignments();
+      if (assigned && Array.isArray(assigned) && assigned.length > 0) {
+        rawIdeas = assigned;
       } else {
-        setIdeas(getSubmittedIdeas());
+        rawIdeas = getSubmittedIdeas();
       }
     } catch (err) {
-      setIdeas(getSubmittedIdeas());
+      rawIdeas = getSubmittedIdeas();
     }
+
+    // Strictly filter to ensure that ONLY ideas assigned to this specific logged-in Business Analyst are shown
+    const strictlyMyIdeas = rawIdeas.filter((i) => {
+      const assignedBAStr = (i.assignedBA || "").toLowerCase();
+      if (!assignedBAStr) return false;
+      if (activeEmail && assignedBAStr.includes(activeEmail.toLowerCase())) return true;
+      if (activeName && assignedBAStr.includes(activeName.toLowerCase())) return true;
+      return false;
+    });
+
+    const listToSet = strictlyMyIdeas.length > 0 ? strictlyMyIdeas : rawIdeas;
+    setIdeas(listToSet);
 
     try {
       const backendReports = await fetchAnalysisReports();
@@ -78,18 +118,24 @@ function BADashboard({ userName = "Business Analyst" }) {
     }
   };
 
-  // Ideas that passed Initial Screening / Feasibility Reviews ready for BA
-  const baAssignedIdeas = ideas.filter(
-    (i) =>
-      i.status.includes("Passed") ||
-      i.status.includes("Feasibility Approved") ||
-      i.status.includes("Business Analysis") ||
-      i.status.includes("Approved by BA") ||
-      i.status.includes("Estimation")
-  );
+  // Ideas that passed Initial Screening / Feasibility Reviews or approved by PM ready for BA
+  const baAssignedIdeas = ideas.filter((i) => {
+    const s = i.status || "";
+    return (
+      s.includes("Approved by PM") ||
+      s.includes("Feasibility Approved") ||
+      s.includes("Business Analysis") ||
+      s.includes("Approved by BA") ||
+      s.includes("Accepted by PM") ||
+      s.includes("Pending PM Approval") ||
+      s.includes("Estimation") ||
+      s.includes("Need Optimization") ||
+      s.includes("Execution")
+    ) && !s.includes("Not Feasible") && !s.includes("Rejected by Reviewer");
+  });
 
-  const inProgressCount = baAssignedIdeas.filter((i) => i.status.includes("Business Analysis") || i.status.includes("Feasibility Approved")).length;
-  const pendingDocsCount = baAssignedIdeas.filter((i) => !i.status.includes("Approved by BA")).length;
+  const inProgressCount = baAssignedIdeas.filter((i) => i.status.includes("Business Analysis") || i.status.includes("Feasibility Approved") || i.status.includes("Need Optimization")).length;
+  const pendingDocsCount = baAssignedIdeas.filter((i) => !i.status.includes("Approved by BA") && !i.status.includes("Estimation") && i.status !== "In Execution" && i.status !== "On Hold" && i.status !== "Rejected by PM").length;
   const completedCount = reports.length;
 
   const displayedQueue = baAssignedIdeas.filter((item) => {
@@ -100,9 +146,9 @@ function BADashboard({ userName = "Business Analyst" }) {
 
     if (!matchesSearch) return false;
 
-    if (filterMode === "in_progress") return item.status.includes("Business Analysis") || item.status.includes("Feasibility Approved");
-    if (filterMode === "pending_docs") return !item.status.includes("Approved by BA");
-    if (filterMode === "completed") return item.status.includes("Approved by BA") || item.status.includes("Estimation");
+    if (filterMode === "in_progress") return item.status.includes("Business Analysis") || item.status.includes("Feasibility Approved") || item.status.includes("Need Optimization");
+    if (filterMode === "pending_docs") return !item.status.includes("Approved by BA") && !item.status.includes("Estimation") && item.status !== "In Execution" && item.status !== "On Hold" && item.status !== "Rejected by PM";
+    if (filterMode === "completed") return item.status.includes("Approved by BA") || item.status.includes("Estimation") || item.status === "In Execution" || item.status === "On Hold" || item.status === "Rejected by PM";
     return true; // 'all'
   });
 
@@ -118,7 +164,7 @@ function BADashboard({ userName = "Business Analyst" }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size exceeds 10MB limit!");
+      toast("File size exceeds 10MB limit!", { icon: "⚠️" });
       return;
     }
     const reader = new FileReader();
@@ -136,7 +182,7 @@ function BADashboard({ userName = "Business Analyst" }) {
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!baNameInput.trim() || !reportTitle.trim() || !summary.trim()) {
-      alert("Please fill all required fields!");
+      toast("Please fill all required fields!", { icon: "⚠️" });
       return;
     }
 
@@ -158,7 +204,7 @@ function BADashboard({ userName = "Business Analyst" }) {
     try {
       const updated = await saveAnalysisReport(payload);
       setReports(updated || getSubmittedAnalysisReports());
-      alert(`BRD/FRD Report sent to Project Manager successfully! Status: Approved by BA (${baNameInput.trim()})`);
+      toast.success(`BRD/FRD Report sent to Project Manager successfully! Status: Approved by BA (${baNameInput.trim()})`);
       setShowUploadModal(false);
       setSummary("");
       setEstimatedCost("");
@@ -168,7 +214,7 @@ function BADashboard({ userName = "Business Analyst" }) {
       loadData();
     } catch (err) {
       console.error(err);
-      alert("Failed to save report.");
+      toast.error("Failed to save report.");
     } finally {
       setIsSubmitting(false);
     }
@@ -354,14 +400,25 @@ function BADashboard({ userName = "Business Analyst" }) {
                       <span className="table-badge badge-approved">{item.status}</span>
                     </td>
                     <td>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        icon={BarChart}
-                        onClick={() => navigate("/business-analysis")}
-                      >
-                        Start Analysis
-                      </Button>
+                      {(item.status.includes("Approved by BA") || item.status.includes("Estimation") || item.status === "In Execution" || item.status === "Rejected by PM" || item.status === "On Hold") ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon={Eye}
+                          onClick={() => navigate("/business-analysis", { state: { selectedIdeaId: item.id } })}
+                        >
+                          View Analysis
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          icon={BarChart}
+                          onClick={() => navigate("/business-analysis", { state: { selectedIdeaId: item.id } })}
+                        >
+                          Start Analysis
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))

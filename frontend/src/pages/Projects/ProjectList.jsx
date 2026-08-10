@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   FolderKanban,
   PlayCircle,
@@ -22,13 +23,14 @@ import {
   Sparkles,
   ChevronRight,
   ShieldCheck,
-  Send
+  Send,
+  XCircle
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
-import { fetchAllIdeas, fetchAnalysisReports } from "../../services/api";
+import { fetchAllIdeas, fetchAnalysisReports, patchIdeaStatus, patchAnalysisReportStatus } from "../../services/api";
 import {
   getSubmittedIdeas,
   getSubmittedAnalysisReports,
@@ -42,6 +44,7 @@ function ProjectList() {
   const [ideas, setIdeas] = useState([]);
   const [reports, setReports] = useState([]);
   const [pmName, setPmName] = useState("Ayushman Raj");
+  const [userRole, setUserRole] = useState("User");
   const [filterTab, setFilterTab] = useState("all");
 
   // Modals
@@ -68,12 +71,27 @@ function ProjectList() {
           setPmName(u.username);
           setAssignedLead(u.username);
         }
+        if (u.role) {
+          setUserRole(u.role);
+        }
       } catch (e) {
         console.error(e);
       }
     }
 
     loadAllData();
+
+    const handleUpdate = () => {
+      loadAllData();
+    };
+
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("ideaStatusChanged", handleUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("ideaStatusChanged", handleUpdate);
+    };
   }, []);
 
   const loadAllData = async () => {
@@ -106,14 +124,26 @@ function ProjectList() {
       i.status.includes("Approved by BA") ||
       i.status.includes("Accepted by PM") ||
       i.status.includes("Feasibility Approved") ||
-      i.status.includes("Project") ||
-      i.status.includes("Execution")
+      i.status.includes("Pending PM Approval") ||
+      i.status.includes("Execution") ||
+      i.status.includes("Need Optimization") ||
+      i.status.includes("On Hold") ||
+      i.status.includes("Rejected by PM") ||
+      i.status.includes("Completed")
   );
 
   const filteredProjects = projectPortfolio.filter((p) => {
-    if (filterTab === "ready") return p.status.includes("Approved by BA") || p.status.includes("Feasibility Approved");
-    if (filterTab === "active") return p.status.includes("Execution") || p.status.includes("Accepted by PM") || p.status.includes("Project");
-    if (filterTab === "completed") return p.status.includes("Completed");
+    if (filterTab === "ready") {
+      return (
+        p.status.includes("Approved by BA") ||
+        p.status.includes("Feasibility Approved") ||
+        p.status.includes("Pending PM Approval") ||
+        p.status.includes("Need Optimization") ||
+        p.status.includes("On Hold")
+      );
+    }
+    if (filterTab === "active") return p.status.includes("Execution") || p.status.includes("Accepted by PM");
+    if (filterTab === "completed") return p.status.includes("Completed") || p.status.includes("Rejected");
     return true; // 'all'
   });
 
@@ -129,7 +159,7 @@ function ProjectList() {
   const handleOnboardSubmit = async (e) => {
     e.preventDefault();
     if (!projectTitle.trim()) {
-      alert("Please enter Project Title!");
+      toast("Please enter Project Title!", { icon: "⚠️" });
       return;
     }
 
@@ -141,10 +171,16 @@ function ProjectList() {
 
     try {
       if (selectedIdeaId) {
-        updateIdeaStatus(Number(selectedIdeaId), targetStatus, notes);
+        // 1. Update PostgreSQL Backend Database
+        await patchIdeaStatus(Number(selectedIdeaId), targetStatus, notes);
         
-        // Also update linked report if any
         const linkedReport = reports.find((r) => String(r.ideaId) === String(selectedIdeaId));
+        if (linkedReport) {
+          await patchAnalysisReportStatus(linkedReport.id, targetStatus, notes);
+        }
+
+        // 2. Update Local Storage Cache
+        updateIdeaStatus(Number(selectedIdeaId), targetStatus, notes);
         if (linkedReport) {
           updateAnalysisReportStatus(linkedReport.id, targetStatus, notes);
         }
@@ -162,23 +198,33 @@ function ProjectList() {
       loadAllData();
     } catch (err) {
       console.error(err);
-      alert("Failed to onboard project.");
+      toast.error("Failed to onboard project.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Quick Status Transition for PM (e.g. Move to In Execution or Mark Completed)
-  const handleQuickStatusChange = (projectId, newStatus) => {
+  const handleQuickStatusChange = async (projectId, newStatus) => {
     const notes = `Updated to ${newStatus} by PM: ${pmName}`;
-    updateIdeaStatus(projectId, newStatus, notes);
+    
+    try {
+      await patchIdeaStatus(projectId, newStatus, notes);
+      const linkedReport = reports.find((r) => String(r.ideaId) === String(projectId));
+      if (linkedReport) {
+        await patchAnalysisReportStatus(linkedReport.id, newStatus, notes);
+      }
+    } catch (err) {
+      console.error("Failed to update status on backend:", err);
+    }
 
+    updateIdeaStatus(projectId, newStatus, notes);
     const linkedReport = reports.find((r) => String(r.ideaId) === String(projectId));
     if (linkedReport) {
       updateAnalysisReportStatus(linkedReport.id, newStatus, notes);
     }
 
-    setSuccessBanner(`Project status updated to "${newStatus}"! Synced across all dashboards.`);
+    toast.success(`Project status transitioned to "${newStatus}"!`);
     loadAllData();
   };
 
@@ -254,21 +300,21 @@ function ProjectList() {
           <span className="kpi-num-val">{projectPortfolio.length}</span>
         </div>
 
-        {/* Card 2: Ready to Onboard (BA Approved) */}
+        {/* Card 2: Ready for PM Review / Kick-off */}
         <div
           className={`kpi-mini-card ${filterTab === "ready" ? "active-kpi-ring" : ""}`}
           onClick={() => setFilterTab("ready")}
           style={{ cursor: "pointer", border: filterTab === "ready" ? "2px solid #3b82f6" : "1px solid #e2e8f0" }}
-          title="View BA Approved Proposals Ready to Onboard"
+          title="View Proposals Ready for PM Review or Onboarding"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">Ready for Kick-off (BA Approved)</span>
+            <span className="kpi-label-txt">Ready for Review / Kick-off</span>
             <div className="kpi-icon-pill pill-blue">
               <FileText size={20} />
             </div>
           </div>
           <span className="kpi-num-val">
-            {projectPortfolio.filter((p) => p.status.includes("Approved by BA") || p.status.includes("Feasibility Approved")).length}
+            {projectPortfolio.filter((p) => p.status.includes("Approved by BA") || p.status.includes("Feasibility Approved") || p.status.includes("Pending PM Approval")).length}
           </span>
         </div>
 
@@ -286,7 +332,7 @@ function ProjectList() {
             </div>
           </div>
           <span className="kpi-num-val">
-            {projectPortfolio.filter((p) => p.status.includes("Execution") || p.status.includes("Accepted by PM") || p.status.includes("Project")).length}
+            {projectPortfolio.filter((p) => p.status.includes("Execution") || p.status.includes("Accepted by PM")).length}
           </span>
         </div>
 
@@ -314,7 +360,7 @@ function ProjectList() {
         <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-muted)" }}>Portfolio View:</span>
         {[
           { id: "all", label: "All Projects" },
-          { id: "ready", label: "Ready to Onboard (BA Approved)" },
+          { id: "ready", label: "Pending PM Review / Onboard" },
           { id: "active", label: "In Execution / Active" },
           { id: "completed", label: "Completed" }
         ].map((tab) => (
@@ -369,8 +415,14 @@ function ProjectList() {
                 filteredProjects.map((item, idx) => {
                   const linkedReport = reports.find((r) => String(r.ideaId) === String(item.id));
                   const progressPct = item.status.includes("Execution") ? (idx % 2 === 0 ? 75 : 50) : item.status.includes("Completed") ? 100 : 25;
-                  const isBaApproved = item.status.includes("Approved by BA");
-                  const isInExecution = item.status.includes("Execution") || item.status.includes("Accepted by PM");
+                  const isBaApproved =
+                    item.status.includes("Approved by BA") ||
+                    item.status.includes("Feasibility Approved") ||
+                    item.status.includes("Need Optimization") ||
+                    item.status.includes("On Hold") ||
+                    item.status.includes("Rejected by PM");
+                  const isInExecution = item.status.includes("Execution") || item.status.includes("Accepted by PM") || item.status.includes("Completed");
+                  const isPMOrAdmin = userRole === "Project Manager" || userRole === "Administrator";
 
                   return (
                     <tr key={item.id}>
@@ -461,15 +513,105 @@ function ProjectList() {
                           </Button>
 
                           {/* Kick-off / Status Change Button */}
-                          {!isInExecution ? (
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              icon={PlayCircle}
-                              onClick={() => handleQuickStatusChange(item.id, "In Execution")}
-                            >
-                              Kick-off Execution
-                            </Button>
+                          {/* Kick-off / Status Change Button */}
+                          {!isInExecution && isPMOrAdmin ? (
+                            (() => {
+                              const hasBaReport = reports.some((r) => String(r.ideaId) === String(item.id));
+                              if (item.status === "Pending PM Approval" || (!hasBaReport && (item.status === "Need Optimization" || item.status === "On Hold" || item.status === "Rejected by PM"))) {
+                                return (
+                                  <select
+                                    className="custom-input-elem"
+                                    style={{
+                                      fontSize: "12px",
+                                      fontWeight: "700",
+                                      padding: "4px 8px",
+                                      height: "32px",
+                                      width: "165px",
+                                      border: "1.5px solid var(--primary-light)",
+                                      borderRadius: "6px",
+                                      background: "#ffffff",
+                                      color: "var(--text-dark)",
+                                      cursor: "pointer",
+                                      outline: "none"
+                                    }}
+                                    value=""
+                                    onChange={(e) => {
+                                      const selectedVal = e.target.value;
+                                      let mappedStatus = "";
+                                      if (selectedVal === "Approved") mappedStatus = "Feasibility Approved";
+                                      else if (selectedVal === "Execution") mappedStatus = "In Execution";
+                                      else if (selectedVal === "Reject") mappedStatus = "Rejected by PM";
+                                      
+                                      if (mappedStatus) {
+                                        handleQuickStatusChange(item.id, mappedStatus);
+                                      }
+                                    }}
+                                  >
+                                    <option value="" disabled>-- PM Approval Action --</option>
+                                    <option value="Approved" style={{ fontWeight: "700", color: "#16a34a" }}>✅ Approve & Pass to BA</option>
+                                    <option value="Execution" style={{ fontWeight: "700", color: "#4f46e5" }}>🚀 Accept & Onboard Project</option>
+                                    <option value="Reject" style={{ fontWeight: "700", color: "#dc2626" }}>❌ Reject Proposal</option>
+                                  </select>
+                                );
+                              } else if (item.status === "Feasibility Approved" || item.status.includes("Business Analysis")) {
+                                return (
+                                  <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "700" }}>
+                                    ⏳ Awaiting BA Analysis
+                                  </span>
+                                );
+                              } else {
+                                // BA Approved or (hasBaReport and Optimization/Hold/PM Rejected)
+                                return (
+                                  <select
+                                    className="custom-input-elem"
+                                    style={{
+                                      fontSize: "12px",
+                                      fontWeight: "700",
+                                      padding: "4px 8px",
+                                      height: "32px",
+                                      width: "165px",
+                                      border: "1.5px solid var(--primary-light)",
+                                      borderRadius: "6px",
+                                      background: "#ffffff",
+                                      color: "var(--text-dark)",
+                                      cursor: "pointer",
+                                      outline: "none"
+                                    }}
+                                    value={
+                                      item.status === "Need Optimization"
+                                        ? "Need Optimization"
+                                        : item.status === "Rejected by PM"
+                                        ? "Reject"
+                                        : item.status === "On Hold"
+                                        ? "Hold"
+                                        : ""
+                                    }
+                                    onChange={(e) => {
+                                      const selectedVal = e.target.value;
+                                      let mappedStatus = "";
+                                      if (selectedVal === "Approved") mappedStatus = "In Execution";
+                                      else if (selectedVal === "Need Optimization") mappedStatus = "Need Optimization";
+                                      else if (selectedVal === "Reject") mappedStatus = "Rejected by PM";
+                                      else if (selectedVal === "Hold") mappedStatus = "On Hold";
+                                      
+                                      if (mappedStatus) {
+                                        handleQuickStatusChange(item.id, mappedStatus);
+                                      }
+                                    }}
+                                  >
+                                    <option value="" disabled>-- BA Report Review --</option>
+                                    <option value="Approved" style={{ fontWeight: "700", color: "#16a34a" }}>✅ Approved (Kick-off)</option>
+                                    <option value="Need Optimization" style={{ fontWeight: "700", color: "#d97706" }}>⚠️ Need Optimization</option>
+                                    <option value="Reject" style={{ fontWeight: "700", color: "#dc2626" }}>❌ Reject</option>
+                                    <option value="Hold" style={{ fontWeight: "700", color: "#2563eb" }}>⏸️ Hold</option>
+                                  </select>
+                                );
+                              }
+                            })()
+                          ) : !isInExecution ? (
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "700" }}>
+                              Awaiting PM Action
+                            </span>
                           ) : (
                             <Button
                               size="sm"
@@ -517,7 +659,7 @@ function ProjectList() {
                 style={{ fontSize: "14px", fontWeight: "600" }}
               >
                 <option value="">-- Select Proposal from BA Approved Queue --</option>
-                {ideas.map((i) => (
+                {ideas.filter((i) => i.status.includes("Approved by BA")).map((i) => (
                   <option key={i.id} value={i.id}>
                     {i.title} ({i.category}) — Status: {i.status}
                   </option>

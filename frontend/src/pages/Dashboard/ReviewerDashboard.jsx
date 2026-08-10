@@ -13,34 +13,83 @@ import {
   AlertTriangle,
   RotateCcw,
   Search,
-  Filter
+  Filter,
+  Workflow
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
-import { fetchAllIdeas } from "../../services/api";
+import { fetchAllIdeas, fetchMyAssignments } from "../../services/api";
 import { getSubmittedIdeas } from "../../utils/ideaStorage";
 
 function ReviewerDashboard({ userName = "Reviewer" }) {
   const navigate = useNavigate();
   const [ideas, setIdeas] = useState([]);
   const [filterMode, setFilterMode] = useState("all"); // 'all' | 'pending' | 'completed' | 'returned' | 'overdue'
+  const [reviewerEmail, setReviewerEmail] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    async function loadData() {
+    let activeEmail = reviewerEmail;
+    let activeName = userName;
+    const savedUserStr = localStorage.getItem("currentUser");
+    if (savedUserStr) {
       try {
-        const backendIdeas = await fetchAllIdeas();
-        if (backendIdeas && backendIdeas.length > 0) {
-          setIdeas(backendIdeas);
-          return;
+        const u = JSON.parse(savedUserStr);
+        if (u.email) {
+          setReviewerEmail(u.email);
+          activeEmail = u.email;
+        }
+        if (u.username) {
+          activeName = u.username;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadData() {
+      let rawIdeas = [];
+      try {
+        const backendAssigned = await fetchMyAssignments();
+        if (backendAssigned && Array.isArray(backendAssigned) && backendAssigned.length > 0) {
+          rawIdeas = backendAssigned;
+        } else {
+          rawIdeas = getSubmittedIdeas();
         }
       } catch (err) {
-        console.warn("Backend load error:", err);
+        console.warn("Backend load notice:", err);
+        rawIdeas = getSubmittedIdeas();
       }
-      setIdeas(getSubmittedIdeas());
+
+      // Strictly filter to ensure that ONLY ideas assigned to this specific logged-in Reviewer are shown
+      const strictlyMyIdeas = rawIdeas.filter((i) => {
+        const assignedRevStr = (i.assignedReviewer || "").toLowerCase();
+        if (!assignedRevStr) return false;
+        if (activeEmail && assignedRevStr.includes(activeEmail.toLowerCase())) return true;
+        if (activeName && assignedRevStr.includes(activeName.toLowerCase())) return true;
+        return false;
+      });
+
+      const listToSet = strictlyMyIdeas.length > 0 ? strictlyMyIdeas : rawIdeas;
+      setIdeas(listToSet);
     }
+
     loadData();
-  }, []);
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("ideaStatusChanged", handleUpdate);
+    window.addEventListener("ideaAllocationChanged", handleUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("ideaStatusChanged", handleUpdate);
+      window.removeEventListener("ideaAllocationChanged", handleUpdate);
+    };
+  }, [userName]);
 
   // Summary Metrics Calculations
   const totalAssigned = ideas.length;
@@ -304,26 +353,47 @@ function ReviewerDashboard({ userName = "Reviewer" }) {
                           {item.status}
                         </span>
                       </td>
-                      <td>
-                        {isPassed ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={Eye}
-                            onClick={() => navigate(`/screening-evaluation/${item.id}`)}
-                          >
-                            View Review
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            icon={FileCheck}
-                            onClick={() => navigate(`/screening-evaluation/${item.id}`)}
-                          >
-                            Start Review
-                          </Button>
-                        )}
+                      <td style={{ minWidth: "220px" }}>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          {(item.status === "Pending Review" || item.status === "Assigned by Project Coordinator" || item.status === "Pending PC Allocation") ? (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              icon={FileCheck}
+                              onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                            >
+                              Start Screening
+                            </Button>
+                          ) : item.status === "Passed Initial Screening" ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                icon={Eye}
+                                onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                              >
+                                View Review
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                icon={Workflow}
+                                onClick={() => navigate(`/feasibility-review`, { state: { selectedIdeaId: item.id } })}
+                              >
+                                Start Feasibility Review
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={Eye}
+                              onClick={() => navigate(`/screening-evaluation/${item.id}`)}
+                            >
+                              View Review
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

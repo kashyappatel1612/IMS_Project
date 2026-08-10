@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   BarChart,
   Upload,
@@ -29,17 +30,19 @@ import {
   getSubmittedAnalysisReports,
   saveAnalysisReport
 } from "../../utils/ideaStorage";
-import { fetchAllIdeas, fetchAnalysisReports } from "../../services/api";
+import { fetchAllIdeas, fetchAnalysisReports, fetchMyAssignments } from "../../services/api";
 
 function BusinessAnalysis() {
+  const location = useLocation();
   const [userRole, setUserRole] = useState("User");
   const [ideas, setIdeas] = useState([]);
   const [reports, setReports] = useState([]);
   const [selectedIdeaId, setSelectedIdeaId] = useState("");
+  const [isChangingSelection, setIsChangingSelection] = useState(false);
   const [viewingReport, setViewingReport] = useState(null);
 
   // Form State
-  const [baName, setBaName] = useState("Ayushman Raj");
+  const [baName, setBaName] = useState("Business Analyst");
   const [baEmail, setBaEmail] = useState("");
   const [reportTitle, setReportTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -50,32 +53,69 @@ function BusinessAnalysis() {
   const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
+    let currentEmail = "";
+    let currentUsername = "";
     // Read logged-in user profile
     const savedUserStr = localStorage.getItem("currentUser");
     if (savedUserStr) {
       try {
         const u = JSON.parse(savedUserStr);
         if (u.role) setUserRole(u.role);
-        if (u.username) setBaName(u.username);
-        if (u.email) setBaEmail(u.email);
+        if (u.username) {
+          setBaName(u.username);
+          currentUsername = u.username;
+        }
+        if (u.email) {
+          setBaEmail(u.email);
+          currentEmail = u.email;
+        }
       } catch (e) {
         console.error(e);
       }
     }
 
-    loadInitialData();
+    loadInitialData(currentEmail, currentUsername);
+
+    const handleUpdate = () => {
+      loadInitialData(currentEmail, currentUsername);
+    };
+
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("ideaStatusChanged", handleUpdate);
+    window.addEventListener("ideaAllocationChanged", handleUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("ideaStatusChanged", handleUpdate);
+      window.removeEventListener("ideaAllocationChanged", handleUpdate);
+    };
   }, []);
 
-  const loadInitialData = async () => {
+  const loadInitialData = async (activeEmail = "", activeName = "") => {
+    let rawIdeas = [];
     try {
-      const apiIdeas = await fetchAllIdeas();
+      const apiIdeas = await fetchMyAssignments();
       if (apiIdeas && apiIdeas.length > 0) {
-        setIdeas(apiIdeas);
+        rawIdeas = apiIdeas;
       } else {
-        setIdeas(getSubmittedIdeas());
+        rawIdeas = getSubmittedIdeas();
       }
     } catch (err) {
-      setIdeas(getSubmittedIdeas());
+      rawIdeas = getSubmittedIdeas();
+    }
+
+    if (userRole === "Business Analyst") {
+      const strictlyMyIdeas = rawIdeas.filter((i) => {
+        const assignedBAStr = (i.assignedBA || "").toLowerCase();
+        if (!assignedBAStr) return false;
+        if (activeEmail && assignedBAStr.includes(activeEmail.toLowerCase())) return true;
+        if (activeName && assignedBAStr.includes(activeName.toLowerCase())) return true;
+        return false;
+      });
+      const listToSet = strictlyMyIdeas.length > 0 ? strictlyMyIdeas : rawIdeas;
+      setIdeas(listToSet);
+    } else {
+      setIdeas(rawIdeas);
     }
 
     try {
@@ -89,6 +129,18 @@ function BusinessAnalysis() {
       setReports(getSubmittedAnalysisReports());
     }
   };
+
+  useEffect(() => {
+    if (location.state && location.state.selectedIdeaId) {
+      const targetId = String(location.state.selectedIdeaId);
+      setSelectedIdeaId(targetId);
+      setIsChangingSelection(false);
+      const idea = ideas.find((i) => String(i.id) === targetId);
+      if (idea) {
+        setReportTitle(`Business Analysis & Financial ROI Report - ${idea.title}`);
+      }
+    }
+  }, [location.state, ideas]);
 
   // Pre-fill report title when idea is selected
   const handleIdeaSelect = (ideaId) => {
@@ -191,6 +243,7 @@ function BusinessAnalysis() {
     const s = item.status || "";
     if (s.includes("Not ") || s.includes("Rejected")) return false;
     return (
+      s.includes("Pending PM Approval") ||
       s.includes("Feasibility Approved") ||
       s.includes("Approved by BA") ||
       s.includes("Business Analysis") ||
@@ -200,6 +253,8 @@ function BusinessAnalysis() {
       s.includes("Benefits")
     );
   });
+
+  const selectedIdea = ideas.find((i) => String(i.id) === String(selectedIdeaId));
 
   return (
     <div className="dashboard-wrapper">
@@ -364,27 +419,82 @@ function BusinessAnalysis() {
           </div>
         </Card>
       ) : (
-        /* BUSINESS ANALYST ROLE VIEW: 2-Column Workspace */
-        <div className="screening-workspace-grid">
-          {/* LEFT COLUMN: Upload Analysis Report Form */}
-          <div className="screening-left-col">
-            <Card
-              title="1. Upload & Send Analysis Report to PM"
-              subtitle="Fill BA details, attach analysis document & dispatch to Project Manager"
-            >
-              <form onSubmit={handleSubmitReport} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Select Idea Dropdown */}
+        /* BUSINESS ANALYST ROLE VIEW: Full Width Form */
+        <div style={{ width: "100%" }}>
+          <Card
+            title="1. Upload & Send Analysis Report to PM"
+            subtitle="Fill BA details, attach analysis document & dispatch to Project Manager"
+          >
+            <form onSubmit={handleSubmitReport} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Select Idea Display or Dropdown */}
+              {selectedIdea && !isChangingSelection ? (
+                <div className="input-field-group">
+                  <label className="input-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontWeight: "800", color: "#1e293b" }}>Selected Proposal for Business Analysis *</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      onClick={() => setIsChangingSelection(true)}
+                      style={{ fontSize: "12px", color: "#4f46e5", height: "28px" }}
+                    >
+                      🔄 Change Selected Idea
+                    </Button>
+                  </label>
+                  <div
+                    style={{
+                      padding: "14px 18px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #6366f1",
+                      background: "linear-gradient(135deg, #e0e7ff 0%, #f0fdf4 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "16px",
+                      boxShadow: "0 2px 8px rgba(99, 102, 241, 0.08)"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: "800", background: "#4f46e5", color: "#ffffff", padding: "4px 8px", borderRadius: "6px" }}>
+                        IDEA-{selectedIdea.id}
+                      </span>
+                      <div>
+                        <div style={{ fontSize: "15px", fontWeight: "800", color: "#1e293b" }}>
+                          {selectedIdea.title}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b", display: "flex", gap: "12px", marginTop: "3px" }}>
+                          <span>Domain: <strong>{selectedIdea.category}</strong></span>
+                          <span>Author: <strong>{selectedIdea.author}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="table-badge badge-approved" style={{ fontSize: "12px", padding: "6px 12px" }}>
+                      {selectedIdea.status}
+                    </span>
+                  </div>
+                </div>
+              ) : (
                 <div className="input-field-group">
                   <label className="input-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span>Select Proposal / Idea to Analyze *</span>
-                    <span style={{ fontSize: "11px", color: "#6366f1", fontWeight: "700" }}>
-                      ✓ Feasibility Approved Only ({feasibleIdeas.length} Available)
-                    </span>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      {isChangingSelection && (
+                        <Button size="sm" variant="ghost" type="button" onClick={() => setIsChangingSelection(false)} style={{ fontSize: "12px", height: "26px" }}>
+                          Cancel Change
+                        </Button>
+                      )}
+                      <span style={{ fontSize: "11px", color: "#6366f1", fontWeight: "700" }}>
+                        ✓ Feasibility Approved Only ({feasibleIdeas.length} Available)
+                      </span>
+                    </div>
                   </label>
                   <select
                     className="custom-input-elem"
                     value={selectedIdeaId}
-                    onChange={(e) => handleIdeaSelect(e.target.value)}
+                    onChange={(e) => {
+                      handleIdeaSelect(e.target.value);
+                      setIsChangingSelection(false);
+                    }}
                     style={{ fontSize: "14px", fontWeight: "600" }}
                     required
                   >
@@ -402,260 +512,359 @@ function BusinessAnalysis() {
                     )}
                   </select>
                 </div>
+              )}
 
-                {/* BA Name & Email */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <Input
-                    label="Business Analyst (BA) Name"
-                    placeholder="e.g. Ayushman Raj"
-                    icon={User}
-                    value={baName}
-                    onChange={(e) => setBaName(e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="BA Email Address"
-                    placeholder="e.g. ba@company.com"
-                    icon={Mail}
-                    value={baEmail}
-                    onChange={(e) => setBaEmail(e.target.value)}
-                  />
-                </div>
-
-                {/* Report Title */}
+              {/* BA Name & Email */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <Input
-                  label="Analysis Report Title"
-                  placeholder="e.g. Detailed Financial & Technical Feasibility Study"
-                  icon={FileText}
-                  value={reportTitle}
-                  onChange={(e) => setReportTitle(e.target.value)}
+                  label="Business Analyst (BA) Name"
+                  placeholder="e.g. Ayushman Raj"
+                  icon={User}
+                  value={baName}
+                  onChange={(e) => setBaName(e.target.value)}
                   required
                 />
+                <Input
+                  label="BA Contact Email"
+                  placeholder="e.g. ba@company.com"
+                  icon={Mail}
+                  value={baEmail}
+                  onChange={(e) => setBaEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-                {/* Financial Cost & ROI Projections */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <Input
-                    label="Estimated Implementation Cost"
-                    placeholder="e.g. $45,000 / INR 5,00,000"
-                    icon={DollarSign}
-                    value={estimatedCost}
-                    onChange={(e) => setEstimatedCost(e.target.value)}
-                  />
-                  <Input
-                    label="Projected Annual ROI / Value"
-                    placeholder="e.g. 320% ROI / $150k Annual Benefit"
-                    icon={TrendingUp}
-                    value={projectedRoi}
-                    onChange={(e) => setProjectedRoi(e.target.value)}
-                  />
-                </div>
+              {/* Dynamic Feasibility Evaluator Review Details Card */}
+              {selectedIdea && (
+                <Card
+                  title="📑 Feasibility Evaluator Review Details"
+                  subtitle="Detailed recommendations, ratings and remarks submitted by evaluators in Stage 2"
+                  style={{
+                    background: "var(--card-bg, #ffffff)",
+                    border: "1.5px solid var(--border-color, #e2e8f0)",
+                    boxShadow: "none",
+                    padding: "16px",
+                    marginTop: "4px",
+                    marginBottom: "4px"
+                  }}
+                >
+                  {(() => {
+                    let notes = null;
+                    if (selectedIdea.evaluatorNotes) {
+                      try {
+                        notes = typeof selectedIdea.evaluatorNotes === "string" 
+                          ? JSON.parse(selectedIdea.evaluatorNotes) 
+                          : selectedIdea.evaluatorNotes;
+                      } catch (e) {
+                        console.error("Error parsing notes:", e);
+                      }
+                    }
 
-                {/* Executive Summary / Notes */}
-                <div className="input-field-group">
-                  <label className="input-label">Executive Summary & Commercial Analysis Notes *</label>
-                  <textarea
-                    className="custom-input-elem"
-                    rows={4}
-                    placeholder="Provide key insights, risk assessment, payback period, and strategic alignment notes for the PM..."
-                    value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
-                    required
-                  ></textarea>
-                </div>
+                    if (!notes) {
+                      return (
+                        <div style={{ padding: "8px", fontSize: "12.5px", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center" }}>
+                          No parallel feasibility evaluation remarks details recorded for this proposal.
+                        </div>
+                      );
+                    }
 
-                {/* Upload File Box */}
-                <div className="input-field-group">
-                  <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Paperclip size={14} /> Upload Analysis Report Document (PDF, DOCX, XLSX, Images)
-                  </label>
-
-                  {!reportFile ? (
-                    <div
-                      style={{
-                        border: "2px dashed #cbd5e1",
-                        borderRadius: "10px",
-                        padding: "20px",
-                        textAlign: "center",
-                        background: "#f8fafc",
-                        cursor: "pointer",
-                        transition: "border-color 0.2s"
-                      }}
-                      onClick={() => document.getElementById("baReportFileInput")?.click()}
-                    >
-                      <Upload size={28} color="#6366f1" style={{ marginBottom: "6px" }} />
-                      <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)" }}>
-                        Click to Browse or Drag & Drop Report File
-                      </div>
-                      <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                        Supports PDF, DOCX, XLSX, CSV, PNG, JPG (Max 10MB)
-                      </div>
-                      <input
-                        id="baReportFileInput"
-                        type="file"
-                        style={{ display: "none" }}
-                        onChange={handleFileChange}
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background: "#e0e7ff",
-                        border: "1px solid #c7d2fe",
-                        padding: "12px 16px",
-                        borderRadius: "10px"
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <FileText size={22} color="#4f46e5" />
-                        <div>
-                          <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e1b4b" }}>
-                            {reportFile.fileName}
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {/* Business Review Details */}
+                        <div style={{ borderBottom: "1px dashed var(--border-color)", paddingBottom: "12px" }}>
+                          <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#6366f1", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                            💼 A. BUSINESS FEASIBILITY REVIEW
+                          </h4>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                            <div>
+                              <strong>Evaluator Name:</strong> {notes.bizReviewer || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Expected Benefits:</strong> {notes.bizExpectedBenefits || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Cost Savings:</strong> {notes.bizCostSavings || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Time Savings:</strong> {notes.bizTimeSavings || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Productivity Improvement:</strong> {notes.bizProductivity || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Quality Improvement:</strong> {notes.bizQuality || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Customer/User Experience:</strong> {notes.bizCustomerExp || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Compliance/Risk Reduction:</strong> {notes.bizCompliance || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Aligns Strategy?:</strong> {notes.bizAlignsStrategy || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Digital Transformation?:</strong> {notes.bizDigitalTransformation || "N/A"}
+                            </div>
+                            <div>
+                              <strong>AI/Automation Roadmap?:</strong> {notes.bizAiRoadmap || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Regulatory Requirement?:</strong> {notes.bizRegulatoryRequirement || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Departments Impacted:</strong> {notes.bizDepartmentsImpacted || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Users Affected:</strong> {notes.bizUsersAffected || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Geographic Locations:</strong> {notes.bizGeographicLocations || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Criticality Level:</strong> <span style={{ fontWeight: "700", color: notes.bizCriticality === "High" ? "#dc2626" : notes.bizCriticality === "Medium" ? "#d97706" : "#2563eb" }}>{notes.bizCriticality || "N/A"}</span>
+                            </div>
                           </div>
-                          <div style={{ fontSize: "11px", color: "#4338ca" }}>
-                            {reportFile.fileSize}
+                        </div>
+
+                        {/* Functional Review Details */}
+                        <div style={{ borderBottom: "1px dashed var(--border-color)", paddingBottom: "12px" }}>
+                          <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#6366f1", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                            ⚙️ B. FUNCTIONAL FEASIBILITY REVIEW
+                          </h4>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                            <div>
+                              <strong>Input Data:</strong> {notes.funcInputData || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Output Data:</strong> {notes.funcOutputData || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Master Data Changes:</strong> {notes.funcMasterDataChanges || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Data Quality Concerns:</strong> {notes.funcDataQualityConcerns || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Process Definition Status:</strong> {notes.funcProcessDefinition || "N/A"}
+                            </div>
+                            <div>
+                              <strong>SOPs/Guidelines Status:</strong> {notes.funcSopAvailability || "N/A"}
+                            </div>
+                            <div>
+                              <strong>User Training Status:</strong> {notes.funcUserTraining || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Change Management Impact:</strong> {notes.funcChangeManagement || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Other App Dependencies:</strong> {notes.funcAppDependencies || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Existing Process Dependencies:</strong> {notes.funcProcessDependencies || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Third-Party Dependencies:</strong> {notes.funcThirdPartyDependencies || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Recommendation Status:</strong> <span style={{ fontWeight: "700", color: notes.funcRecommendation === "Approved" ? "#16a34a" : "#dc2626" }}>{notes.funcRecommendation || "N/A"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Technical Review Details */}
+                        <div>
+                          <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#6366f1", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                            💻 C. TECHNICAL FEASIBILITY REVIEW
+                          </h4>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                            <div>
+                              <strong>Technical Evaluator:</strong> {notes.techReviewer || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Architectural Fit:</strong> {notes.techArchitectureFit || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Security/Compliance:</strong> {notes.techSecurityCompliance || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Infrastructure Scale:</strong> {notes.techInfrastructureScalability || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Developer Skills Fit:</strong> {notes.techResourceSkills || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Integration Complexity:</strong> {notes.techIntegrationComplexity || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Deployment Window:</strong> {notes.techDeploymentEffort || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Evaluation Recommendation:</strong> <span style={{ fontWeight: "700", color: notes.techRecommendation === "Approved" ? "#16a34a" : "#dc2626" }}>{notes.techRecommendation || "N/A"}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setReportFile(null)}
-                        style={{
-                          background: "#fee2e2",
-                          border: "none",
-                          color: "#ef4444",
-                          padding: "6px",
-                          borderRadius: "6px",
-                          cursor: "pointer"
-                        }}
-                        title="Remove file"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    );
+                  })()}
+                </Card>
+              )}
 
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  icon={Send}
-                  disabled={isSubmitting}
-                  style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: "15px" }}
+              {/* Already Processed / Submitted Card */}
+              {selectedIdea && (selectedIdea.status.includes("Approved by BA") || selectedIdea.status.includes("Estimation") || selectedIdea.status === "In Execution" || selectedIdea.status === "Rejected by PM" || selectedIdea.status === "On Hold") ? (
+                <div
+                  style={{
+                    padding: "16px",
+                    borderRadius: "10px",
+                    background: "#ecfdf5",
+                    border: "1.5px solid #10b981",
+                    color: "#065f46",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    marginTop: "12px"
+                  }}
                 >
-                  {isSubmitting ? "Dispatching Report to PM..." : "Send Analysis Report to Project Manager (PM)"}
-                </Button>
-              </form>
-            </Card>
-          </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>
+                    <CheckCircle2 size={18} color="#10b981" />
+                    <span>Requirements Analysis Completed</span>
+                  </div>
+                  <span style={{ fontSize: "13px", color: "#047857" }}>
+                    This proposal is already successfully evaluated and approved by BA. The Requirements report has been dispatched to the PM for execution kickoff.
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    label="Analysis Report Title"
+                    placeholder="e.g. Detailed Financial & Technical Feasibility Study"
+                    icon={FileText}
+                    value={reportTitle}
+                    onChange={(e) => setReportTitle(e.target.value)}
+                    required
+                  />
 
-          {/* RIGHT COLUMN: Submitted Analysis Reports Table */}
-          <div className="screening-right-col">
-            <Card
-              title={`2. Submitted Analysis Reports (${reports.length})`}
-              subtitle="Track reports dispatched to Project Manager & current approval status"
-            >
-              <div className="data-table-wrapper">
-                <table className="enterprise-table">
-                  <thead>
-                    <tr>
-                      <th>Proposal / Report Title</th>
-                      <th>Prepared & Approved By</th>
-                      <th>Financial ROI</th>
-                      <th>Current Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="empty-state-cell">
-                          <div className="empty-state-flex" style={{ padding: "28px 0" }}>
-                            <Inbox size={32} color="var(--text-light)" />
-                            <span className="empty-state-title">No Analysis Reports Uploaded Yet</span>
-                            <span className="empty-state-sub">Use the form on the left to upload & send an analysis report to PM.</span>
-                          </div>
-                        </td>
-                      </tr>
+                  {/* Financial Cost & ROI Projections */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <Input
+                      label="Estimated Implementation Cost"
+                      placeholder="e.g. $45,000 / INR 5,00,000"
+                      icon={DollarSign}
+                      value={estimatedCost}
+                      onChange={(e) => setEstimatedCost(e.target.value)}
+                    />
+                    <Input
+                      label="Projected Annual ROI / Value"
+                      placeholder="e.g. 320% ROI / $150k Annual Benefit"
+                      icon={TrendingUp}
+                      value={projectedRoi}
+                      onChange={(e) => setProjectedRoi(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Executive Summary / Notes */}
+                  <div className="input-field-group">
+                    <label className="input-label">Executive Summary & Commercial Analysis Notes *</label>
+                    <textarea
+                      className="custom-input-elem"
+                      rows={4}
+                      placeholder="Provide key insights, risk assessment, payback period, and strategic alignment notes for the PM..."
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      required
+                    ></textarea>
+                  </div>
+
+                  {/* Upload File Box */}
+                  <div className="input-field-group">
+                    <label className="input-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Paperclip size={14} /> Upload Analysis Report Document (PDF, DOCX, XLSX, Images)
+                    </label>
+
+                    {!reportFile ? (
+                      <div
+                        style={{
+                          border: "2px dashed #cbd5e1",
+                          borderRadius: "10px",
+                          padding: "20px",
+                          textAlign: "center",
+                          background: "#f8fafc",
+                          cursor: "pointer",
+                          transition: "border-color 0.2s"
+                        }}
+                        onClick={() => document.getElementById("baReportFileInput")?.click()}
+                      >
+                        <Upload size={28} color="#6366f1" style={{ marginBottom: "6px" }} />
+                        <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)" }}>
+                          Click to Browse or Drag & Drop Report File
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                          Supports PDF, DOCX, XLSX, CSV, PNG, JPG (Max 10MB)
+                        </div>
+                        <input
+                          id="baReportFileInput"
+                          type="file"
+                          style={{ display: "none" }}
+                          onChange={handleFileChange}
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
+                        />
+                      </div>
                     ) : (
-                      reports.map((rep) => {
-                        const isBaApproved = rep.status.includes("Approved by BA");
-                        const isPmAccepted = rep.status.includes("Accepted by PM") || rep.status.includes("Execution");
-
-                        return (
-                          <tr key={rep.id}>
-                            <td>
-                              <div style={{ fontWeight: "700", color: "var(--text-dark)" }}>
-                                {rep.reportTitle || rep.ideaTitle}
-                              </div>
-                              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                                Idea: {rep.ideaTitle} • {rep.date}
-                              </div>
-                            </td>
-                            <td>
-                              <span
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  background: "#f1f5f9",
-                                  padding: "3px 8px",
-                                  borderRadius: "12px",
-                                  fontSize: "12px",
-                                  fontWeight: "600"
-                                }}
-                              >
-                                <User size={12} color="#6366f1" /> BA: {rep.baName}
-                              </span>
-                            </td>
-                            <td>
-                              <div style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a" }}>
-                                {rep.projectedRoi || "N/A"}
-                              </div>
-                              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                                Cost: {rep.estimatedCost || "N/A"}
-                              </div>
-                            </td>
-                            <td>
-                              <span
-                                className={`table-badge ${
-                                  isPmAccepted
-                                    ? "badge-approved"
-                                    : isBaApproved
-                                    ? "badge-approved"
-                                    : "badge-review"
-                                }`}
-                                style={{
-                                  background: isBaApproved ? "#e0e7ff" : undefined,
-                                  color: isBaApproved ? "#4338ca" : undefined
-                                }}
-                              >
-                                {rep.status}
-                              </span>
-                            </td>
-                            <td>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                icon={Eye}
-                                onClick={() => setViewingReport(rep)}
-                              >
-                                View Report
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background: "#e0e7ff",
+                          border: "1px solid #c7d2fe",
+                          padding: "12px 16px",
+                          borderRadius: "10px"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <FileText size={22} color="#4f46e5" />
+                          <div>
+                            <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e1b4b" }}>
+                              {reportFile.fileName}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#4338ca" }}>
+                              {reportFile.fileSize}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setReportFile(null)}
+                          style={{
+                            background: "#fee2e2",
+                            border: "none",
+                            color: "#ef4444",
+                            padding: "6px",
+                            borderRadius: "6px",
+                            cursor: "pointer"
+                          }}
+                          title="Remove file"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    icon={Send}
+                    disabled={isSubmitting}
+                    style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: "15px" }}
+                  >
+                    {isSubmitting ? "Dispatching Report to PM..." : "Send Analysis Report to Project Manager (PM)"}
+                  </Button>
+                </>
+              )}
+            </form>
+          </Card>
         </div>
       )}
 

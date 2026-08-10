@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   Lightbulb,
   ArrowLeft,
@@ -71,7 +72,7 @@ function SubmitIdea() {
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size exceeds 10MB limit!");
+      toast("File size exceeds 10MB limit!", { icon: "⚠️" });
       return;
     }
 
@@ -90,7 +91,7 @@ function SubmitIdea() {
     };
 
     reader.onerror = () => {
-      alert("Error reading file!");
+      toast.error("Error reading file!");
       setIsUploading(false);
     };
 
@@ -122,12 +123,12 @@ function SubmitIdea() {
     e.preventDefault();
 
     if (!ideaTitle.trim() || !problemStatement.trim() || !ideaDescription.trim()) {
-      alert("Please fill all required fields marked with *");
+      toast("Please fill all required fields marked with *", { icon: "⚠️" });
       return;
     }
 
     if (ideaCategory === "Others" && !customCategory.trim()) {
-      alert("Please specify your Industry Domain in the text field.");
+      toast("Please specify your Industry Domain in the text field.", { icon: "⚠️" });
       return;
     }
 
@@ -164,7 +165,7 @@ function SubmitIdea() {
       setSubmittedIdeaModal(savedIdea);
     } catch (err) {
       console.error(err);
-      alert("Failed to save idea to database.");
+      toast.error("Failed to save idea to database.");
     } finally {
       setSubmitting(false);
     }

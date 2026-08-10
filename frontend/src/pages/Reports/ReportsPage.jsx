@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import {
   FileBarChart,
   PieChart,
@@ -48,7 +49,7 @@ function ReportsPage() {
 
   const handleExportCSV = () => {
     if (ideas.length === 0) {
-      alert("No data available to export.");
+      toast("No data available to export.", { icon: "⚠️" });
       return;
     }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   ListTodo,
   Plus,
@@ -46,7 +47,7 @@ function UserStoriesStudio() {
     setStories([newS, ...stories]);
     setShowAddModal(false);
     setNewTitle("");
-    alert(`User Story ${newS.id} created successfully!`);
+    toast.success(`User Story ${newS.id} created successfully!`);
   };
 
   return (

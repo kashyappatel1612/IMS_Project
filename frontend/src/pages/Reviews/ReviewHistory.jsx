@@ -22,13 +22,25 @@ function ReviewHistory() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const list = getSubmittedIdeas();
-    setIdeas(list);
+    const updateList = () => {
+      const list = getSubmittedIdeas();
+      setIdeas(list);
+    };
+
+    updateList();
+
+    window.addEventListener("storage", updateList);
+    window.addEventListener("ideaStatusChanged", updateList);
+
+    return () => {
+      window.removeEventListener("storage", updateList);
+      window.removeEventListener("ideaStatusChanged", updateList);
+    };
   }, []);
 
   // Filter completed or processed reviews
   const historyList = ideas.filter(
-    (i) => i.status.includes("Passed") || i.status.includes("Approved") || i.status.includes("Rejected") || i.status === "Information Requested"
+    (i) => i.status.includes("Passed") || i.status.includes("Approved") || i.status.includes("Rejected") || i.status.includes("Pending PM Approval") || i.status.includes("Accepted") || i.status === "Information Requested"
   );
 
   const displayedHistory = historyList.filter((item) => {

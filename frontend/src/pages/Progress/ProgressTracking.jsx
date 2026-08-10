@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   TrendingUp,
   PlayCircle,
@@ -72,7 +73,7 @@ function ProgressTracking() {
   const handleSaveProgressUpdate = (e) => {
     e.preventDefault();
     if (!selectedProjectId) {
-      alert("Please select a project to update!");
+      toast("Please select a project to update!", { icon: "⚠️" });
       return;
     }
 

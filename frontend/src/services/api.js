@@ -110,6 +110,17 @@ export async function fetchAllIdeas() {
   }
 }
 
+export async function fetchMyAssignments() {
+  try {
+    const res = await apiClient.get("/my-assignments");
+    return res.data;
+  } catch (err) {
+    console.warn("Backend API notice for my-assignments, reading from local cache:", err.message);
+    const cached = localStorage.getItem("idea360SubmittedIdeas");
+    return cached ? JSON.parse(cached) : [];
+  }
+}
+
 export async function postNewIdea(ideaData) {
   try {
     const res = await apiClient.post("/ideas", ideaData);
@@ -127,6 +138,60 @@ export async function patchIdeaStatus(id, status, evaluatorNotes = "") {
   } catch (err) {
     console.warn("Backend API notice, updating local cache:", err.message);
     return null;
+  }
+}
+
+export async function updateIdeaAllocationAPI(ideaId, allocationData) {
+  try {
+    const res = await apiClient.patch(`/ideas/${ideaId}/allocation`, allocationData);
+    return res.data;
+  } catch (err) {
+    console.error("Failed to update allocation on backend:", err.message);
+    throw err;
+  }
+}
+
+// Role-Based Assignment API Calls
+export async function fetchUsersByRole(role = "") {
+  try {
+    const res = await apiClient.get("/users/by-role", { params: { role } });
+    return res.data;
+  } catch (err) {
+    console.warn("Failed to fetch users by role:", err.message);
+    return [];
+  }
+}
+
+export async function createAssignmentAPI(assignmentData) {
+  try {
+    const res = await apiClient.post("/assignments", assignmentData);
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to assign user to workflow stage.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function fetchIdeaAssignmentHistory(ideaId) {
+  try {
+    const res = await apiClient.get(`/idea/${ideaId}/assignment`);
+    return res.data;
+  } catch (err) {
+    console.warn("Failed to fetch assignment history:", err.message);
+    return [];
+  }
+}
+
+export async function fetchNotificationsAPI() {
+  try {
+    const res = await apiClient.get("/notifications");
+    return res.data;
+  } catch (err) {
+    console.warn("Failed to fetch notifications:", err.message);
+    return { notifications: [], unreadCount: 0 };
   }
 }
 
@@ -185,4 +250,3 @@ export async function postEvaluator(evaluatorData) {
     return null;
   }
 }
-

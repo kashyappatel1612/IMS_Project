@@ -14,6 +14,7 @@ import ReviewHistory from "../pages/Reviews/ReviewHistory";
 import ReviewerAllocationStudio from "../pages/Reviews/ReviewerAllocationStudio";
 import UserManagementStudio from "../pages/Users/UserManagementStudio";
 import BusinessAnalysis from "../pages/BusinessAnalysis/BusinessAnalysis";
+import SubmittedAnalysisReports from "../pages/BusinessAnalysis/SubmittedAnalysisReports";
 import BrdFrdStudio from "../pages/BusinessAnalysis/BrdFrdStudio";
 import UserStoriesStudio from "../pages/BusinessAnalysis/UserStoriesStudio";
 import DocumentsStudio from "../pages/BusinessAnalysis/DocumentsStudio";
@@ -99,7 +100,7 @@ function AppRoutes() {
           <Route
             path="/feasibility-review"
             element={
-              <ProtectedRoute allowedRoles={["Administrator", "Reviewer", "Business Analyst", "Project Coordinator"]}>
+              <ProtectedRoute allowedRoles={["Reviewer"]}>
                 <FeasibilityReview />
               </ProtectedRoute>
             }
@@ -107,8 +108,16 @@ function AppRoutes() {
           <Route
             path="/business-analysis"
             element={
-              <ProtectedRoute allowedRoles={["Administrator", "Reviewer", "Business Analyst", "Project Coordinator"]}>
+              <ProtectedRoute allowedRoles={["Administrator", "Reviewer", "Business Analyst", "Project Manager", "Project Coordinator"]}>
                 <BusinessAnalysis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis-reports"
+            element={
+              <ProtectedRoute allowedRoles={["Administrator", "Business Analyst", "Project Coordinator"]}>
+                <SubmittedAnalysisReports />
               </ProtectedRoute>
             }
           />

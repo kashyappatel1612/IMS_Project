@@ -5,22 +5,63 @@
 import { apiClient } from "../services/api";
 import { createNotification } from "./notificationStorage";
 
+export const SAMPLE_INITIAL_IDEAS = [
+  {
+    id: 101,
+    title: "AI-Driven Automated Customer Support Bot",
+    category: "E-Commerce",
+    functionalArea: "Customer Operations",
+    targetUser: "Support Agents & Online Shoppers",
+    author: "Rohan Verma",
+    authorEmail: "rohan.verma@imsgroup.com",
+    problemStatement: "Customer support teams spend 60% of their day answering repetitive order tracking and return query calls.",
+    description: "Implement a conversational AI chatbot integrated with ERP for instant order lookup and automated return processing.",
+    proposedSolution: "NLP chatbot using LLM embeddings to handle 70% of tier-1 customer inquiries automatically.",
+    expectedBenefits: "Reduces response time from 15 mins to 5 secs. Projected cost savings of $45,000 annually.",
+    status: "Pending PM Approval",
+    assignedReviewer: "Expert Reviewer (reviewer@imsgroup.com)",
+    assignedBA: "Business Analyst Lead (ba@imsgroup.com)",
+    assignedPM: "Project Manager Lead (pm@imsgroup.com)",
+    date: "Aug 05, 2026"
+  },
+  {
+    id: 102,
+    title: "Smart Inventory & Demand Forecasting Engine",
+    category: "Retail",
+    functionalArea: "Supply Chain",
+    targetUser: "Store Managers & Inventory Planners",
+    author: "Sneha Reddy",
+    authorEmail: "sneha.reddy@imsgroup.com",
+    problemStatement: "Retail stores experience 12% stockouts during seasonal sales due to manual inventory re-ordering.",
+    description: "Machine learning prediction model that forecasts SKU demand per store location.",
+    proposedSolution: "Automated replenishment system integrated with POS.",
+    expectedBenefits: "Minimizes stockouts by 40% and improves inventory turnover.",
+    status: "Pending Review",
+    assignedReviewer: "Expert Reviewer (reviewer@imsgroup.com)",
+    assignedBA: "Business Analyst Lead (ba@imsgroup.com)",
+    assignedPM: "Project Manager Lead (pm@imsgroup.com)",
+    date: "Aug 06, 2026"
+  }
+];
+
 export function getSubmittedIdeas() {
   try {
     const existing = localStorage.getItem("idea360SubmittedIdeas");
-    if (!existing) {
-      localStorage.setItem("idea360SubmittedIdeas", JSON.stringify([]));
-      return [];
+    if (existing) {
+      try {
+        const parsed = JSON.parse(existing);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter((item) => item && item.id !== undefined && item.id !== null);
+        }
+      } catch (e) {
+        // Fallback to sample
+      }
     }
-    const parsed = JSON.parse(existing);
-    const cleanList = parsed.filter((item) => item && item.id !== undefined && item.id !== null);
-    if (cleanList.length !== parsed.length) {
-      localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(cleanList));
-    }
-    return cleanList;
+    localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(SAMPLE_INITIAL_IDEAS));
+    return SAMPLE_INITIAL_IDEAS;
   } catch (err) {
     console.error("Error reading submitted ideas", err);
-    return [];
+    return SAMPLE_INITIAL_IDEAS;
   }
 }
 
@@ -29,24 +70,31 @@ export async function fetchIdeasFromApi() {
   try {
     const res = await apiClient.get("/ideas");
     if (res.data && Array.isArray(res.data)) {
+      const dbIds = new Set(res.data.map((i) => String(i.id)));
       const merged = res.data.map((bIdea) => {
         const localMatch = localIdeas.find((l) => String(l.id) === String(bIdea.id));
         if (localMatch) {
+          const isLocalStatusNewer = localMatch.status && localMatch.status !== "Pending PC Allocation" && (bIdea.status === "Pending PC Allocation" || bIdea.status === "Pending Review");
           return {
             ...bIdea,
-            assignedReviewer: bIdea.assignedReviewer || localMatch.assignedReviewer || "",
-            assignedBA: bIdea.assignedBA || localMatch.assignedBA || "",
-            assignedPM: bIdea.assignedPM || localMatch.assignedPM || "",
-            reviewerDeadline: bIdea.reviewerDeadline || localMatch.reviewerDeadline || "",
-            baDeadline: bIdea.baDeadline || localMatch.baDeadline || "",
-            pmDeadline: bIdea.pmDeadline || localMatch.pmDeadline || "",
-            coordinatorNotes: bIdea.coordinatorNotes || localMatch.coordinatorNotes || ""
+            status: isLocalStatusNewer ? localMatch.status : (bIdea.status || localMatch.status),
+            evaluatorNotes: bIdea.evaluatorNotes || localMatch.evaluatorNotes || "",
+            assignedReviewer: localMatch.assignedReviewer || bIdea.assignedReviewer || "",
+            assignedBA: localMatch.assignedBA || bIdea.assignedBA || "",
+            assignedPM: localMatch.assignedPM || bIdea.assignedPM || "",
+            reviewerDeadline: localMatch.reviewerDeadline || bIdea.reviewerDeadline || "",
+            baDeadline: localMatch.baDeadline || bIdea.baDeadline || "",
+            pmDeadline: localMatch.pmDeadline || bIdea.pmDeadline || "",
+            coordinatorNotes: localMatch.coordinatorNotes || bIdea.coordinatorNotes || ""
           };
         }
         return bIdea;
       });
-      localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(merged));
-      return merged;
+
+      const extraLocal = localIdeas.filter((l) => !dbIds.has(String(l.id)));
+      const finalMerged = [...merged, ...extraLocal];
+      localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(finalMerged));
+      return finalMerged;
     }
   } catch (err) {
     console.warn("Backend API notice, fallback to local cache:", err.message);
@@ -98,22 +146,37 @@ export function getIdeaById(id) {
   return ideas.find((i) => String(i.id) === String(id)) || null;
 }
 
-export function updateIdeaStatus(id, newStatus, evaluatorNotes = "") {
-  const currentList = getSubmittedIdeas();
-  const targetIdea = currentList.find((i) => String(i.id) === String(id));
-  const ideaTitle = targetIdea ? targetIdea.title : `IDEA-${id}`;
+export function updateIdeaStatus(id, newStatus, evaluatorNotes = "", fullIdeaObj = null) {
+  let currentList = getSubmittedIdeas();
+  let targetIdea = currentList.find((i) => String(i.id) === String(id));
+
+  if (!targetIdea && fullIdeaObj) {
+    targetIdea = { ...fullIdeaObj, status: newStatus, evaluatorNotes: evaluatorNotes || fullIdeaObj.evaluatorNotes };
+    currentList = [targetIdea, ...currentList];
+  } else if (!targetIdea) {
+    targetIdea = { id: id, title: `IDEA-${id}`, status: newStatus, evaluatorNotes };
+    currentList = [targetIdea, ...currentList];
+  }
 
   const updatedList = currentList.map((idea) =>
     String(idea.id) === String(id)
       ? { ...idea, status: newStatus, evaluatorNotes: evaluatorNotes || idea.evaluatorNotes }
       : idea
   );
+
   localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(updatedList));
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("ideaStatusChanged", { detail: { id, newStatus } }));
+  }
 
   // Sync Status Update to FastAPI Backend Async
   apiClient.patch(`/ideas/${id}/status`, { status: newStatus, evaluatorNotes }).catch((err) => {
     console.warn("Backend status sync notice:", err.message);
   });
+
+  const ideaTitle = targetIdea ? targetIdea.title : `IDEA-${id}`;
 
   // Broadcast Stage Progression Notification to Project Coordinator & Administrator
   createNotification({
@@ -128,6 +191,19 @@ export function updateIdeaStatus(id, newStatus, evaluatorNotes = "") {
     recipientRole: "Administrator",
     title: `✅ Stage Update: ${ideaTitle}`,
     message: `Proposal "${ideaTitle}" passed to stage status: "${newStatus}". Notes: ${evaluatorNotes || "N/A"}.`,
+    ideaId: id,
+    type: "stage_pass"
+  });
+
+  const assignedPMEmail = targetIdea?.assignedPM && targetIdea.assignedPM.includes("(")
+    ? targetIdea.assignedPM.split("(")[1].replace(")", "").trim()
+    : null;
+
+  createNotification({
+    recipientRole: "Project Manager",
+    recipientEmail: assignedPMEmail,
+    title: `🎯 PM Action Required: ${ideaTitle}`,
+    message: `Proposal "${ideaTitle}" passed to stage status: "${newStatus}". Please review and take action.`,
     ideaId: id,
     type: "stage_pass"
   });
@@ -165,6 +241,11 @@ export function updateIdeaAllocation(id, allocationData) {
   const currentList = getSubmittedIdeas();
   const updatedList = currentList.map((idea) => {
     if (String(idea.id) === String(id)) {
+      const isInitialStage = !idea.status || idea.status === "Pending PC Allocation" || idea.status === "Submitted";
+      const finalStatus = isInitialStage
+        ? (allocationData.status || "Assigned by Project Coordinator")
+        : (allocationData.status && allocationData.status !== "Assigned by Project Coordinator" && allocationData.status !== "Assigned to Evaluators" ? allocationData.status : idea.status);
+
       return {
         ...idea,
         assignedReviewer: allocationData.assignedReviewer,
@@ -174,13 +255,19 @@ export function updateIdeaAllocation(id, allocationData) {
         assignedPM: allocationData.assignedPM,
         pmDeadline: allocationData.pmDeadline,
         coordinatorNotes: allocationData.coordinatorNotes || "",
-        status: allocationData.status || "Assigned to Evaluators",
+        status: finalStatus,
         allocatedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       };
     }
     return idea;
   });
   localStorage.setItem("idea360SubmittedIdeas", JSON.stringify(updatedList));
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("ideaStatusChanged", { detail: { id, allocationData } }));
+    window.dispatchEvent(new CustomEvent("ideaAllocationChanged", { detail: { id, allocationData } }));
+  }
 
   apiClient.patch(`/ideas/${id}/allocation`, allocationData).catch((err) => {
     console.warn("Backend allocation sync notice:", err.message);

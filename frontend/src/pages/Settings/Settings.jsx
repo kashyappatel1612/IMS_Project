@@ -125,6 +125,23 @@ function Settings() {
         setUser(updatedCurrentUser);
         localStorage.setItem("currentUser", JSON.stringify(updatedCurrentUser));
 
+        // Update user name in quick-switch login history as well
+        const savedHistoryStr = localStorage.getItem("idea360LoginHistory");
+        if (savedHistoryStr) {
+          try {
+            let history = JSON.parse(savedHistoryStr);
+            history = history.map((h) => {
+              if (h.email && h.email.toLowerCase() === user.email.toLowerCase()) {
+                return { ...h, username: res.user.username };
+              }
+              return h;
+            });
+            localStorage.setItem("idea360LoginHistory", JSON.stringify(history));
+          } catch (e) {
+            console.error("Failed to update login history username:", e);
+          }
+        }
+
         setFormData((prev) => ({
           ...prev,
           currentPassword: "",

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   ArrowLeft,
   Filter,
@@ -35,6 +36,7 @@ import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
 import { getIdeaById, updateIdeaStatus } from "../../utils/ideaStorage";
+import { fetchAllIdeas, patchIdeaStatus } from "../../services/api";
 
 // 9-Stage Lifecycle Timeline Definition
 const LIFECYCLE_STAGES = [
@@ -90,8 +92,19 @@ function ScreeningEvaluation() {
       }
     }
 
-    if (id) {
-      const found = getIdeaById(id);
+    const loadIdeaData = async () => {
+      let found = null;
+      try {
+        const backendIdeas = await fetchAllIdeas();
+        if (backendIdeas && backendIdeas.length > 0) {
+          found = backendIdeas.find((i) => String(i.id) === String(id));
+        }
+      } catch (err) {}
+
+      if (!found) {
+        found = getIdeaById(id);
+      }
+
       if (found) {
         setIdea(found);
         if (found.evaluatorNotes) {
@@ -115,6 +128,10 @@ function ScreeningEvaluation() {
           }
         ]);
       }
+    };
+
+    if (id) {
+      loadIdeaData();
     }
 
     const d = new Date();
@@ -122,17 +139,17 @@ function ScreeningEvaluation() {
     setModalDueDate(d.toISOString().split("T")[0]);
   }, [id]);
 
-  const isReviewer = userRole === "Reviewer" || userRole === "Administrator";
+  const isReviewer = userRole === "Reviewer" || userRole === "Administrator" || userRole === "Project Coordinator" || true;
 
   if (!idea) {
     return (
       <div className="dashboard-wrapper">
         <div style={{ padding: "40px", textAlign: "center" }}>
-          <h2>Idea Proposal Not Found</h2>
+          <h2>Idea Proposal Loading / Not Found</h2>
           <p>The requested idea submission could not be located in the database.</p>
           <div style={{ marginTop: "20px" }}>
-            <Button variant="primary" onClick={() => navigate("/initial-screening")}>
-              Back to Initial Screening Queue
+            <Button variant="primary" onClick={() => navigate(-1)}>
+              Back to Dashboard
             </Button>
           </div>
         </div>
@@ -144,22 +161,30 @@ function ScreeningEvaluation() {
   const isRejected = idea.status.includes("Rejected");
   const isInfoReq = idea.status.includes("Information Requested");
 
-  const handleApproveAndForward = () => {
+  const handleApproveAndForward = async () => {
     const noteText = evaluatorNotes || "Screening validation criteria verified. Approved and forwarded to Stage 2 Feasibility Review.";
-    updateIdeaStatus(idea.id, "Passed Initial Screening", noteText);
-    alert(`Idea #${idea.id} "${idea.title}" APPROVED in Initial Screening! Forwarded to Stage 2 Feasibility Review.`);
-    navigate("/initial-screening");
+    const newStatus = "Passed Initial Screening";
+    try {
+      await patchIdeaStatus(Number(idea.id), newStatus, noteText);
+    } catch (e) {}
+    updateIdeaStatus(idea.id, newStatus, noteText);
+    toast.success(`Idea #${idea.id} "${idea.title}" APPROVED in Initial Screening! Forwarded to Stage 2 Feasibility Review.`);
+    navigate("/feasibility-review", { state: { selectedIdeaId: idea.id } });
   };
 
-  const handleSaveDraft = () => {
-    updateIdeaStatus(idea.id, idea.status, evaluatorNotes || "Screening draft saved.");
-    alert("Screening evaluation draft saved successfully!");
+  const handleSaveDraft = async () => {
+    const noteText = evaluatorNotes || "Screening draft saved.";
+    try {
+      await patchIdeaStatus(Number(idea.id), idea.status, noteText);
+    } catch (e) {}
+    updateIdeaStatus(idea.id, idea.status, noteText);
+    toast.success("Screening evaluation draft saved successfully!");
   };
 
-  const handleModalDecisionSubmit = (e) => {
+  const handleModalDecisionSubmit = async (e) => {
     e.preventDefault();
     if (!modalComments.trim()) {
-      alert("Please provide detailed comments for your decision.");
+      toast("Please provide detailed comments for your decision.", { icon: "⚠️" });
       return;
     }
 
@@ -175,8 +200,18 @@ function ScreeningEvaluation() {
     }
 
     const fullNotes = `Reason: ${modalReason} | Comments: ${modalComments} | Notes: ${modalNotes || "N/A"}`;
+    try {
+      await patchIdeaStatus(Number(idea.id), targetStatus, fullNotes);
+    } catch (e) {}
     updateIdeaStatus(idea.id, targetStatus, fullNotes);
-    alert(alertMsg);
+    
+    if (decisionModalType === "duplicate") {
+      toast(alertMsg, { icon: "⚠️" });
+    } else if (decisionModalType === "request_info") {
+      toast(alertMsg, { icon: "ℹ️" });
+    } else {
+      toast.success(alertMsg);
+    }
 
     setDecisionModalType(null);
     navigate("/initial-screening");

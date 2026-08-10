@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   PlayCircle,
   FolderKanban,
@@ -20,7 +21,7 @@ import {
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
-import { fetchAllIdeas } from "../../services/api";
+import { fetchAllIdeas, fetchMyAssignments } from "../../services/api";
 import { getSubmittedIdeas, updateIdeaStatus } from "../../utils/ideaStorage";
 
 function Execution() {
@@ -34,31 +35,60 @@ function Execution() {
   }, []);
 
   const loadData = async () => {
+    let activeEmail = "";
+    let activeName = "";
+    let userRole = "";
+    const savedUserStr = localStorage.getItem("currentUser");
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        if (u.email) activeEmail = u.email;
+        if (u.username) activeName = u.username;
+        if (u.role) userRole = u.role;
+      } catch (e) {}
+    }
+
+    let rawIdeas = [];
     try {
-      const apiIdeas = await fetchAllIdeas();
+      const apiIdeas = await fetchMyAssignments();
       if (apiIdeas && apiIdeas.length > 0) {
-        filterExecutionProjects(apiIdeas);
-        return;
+        rawIdeas = apiIdeas;
+      } else {
+        rawIdeas = getSubmittedIdeas();
       }
-    } catch (e) {}
-    filterExecutionProjects(getSubmittedIdeas());
+    } catch (e) {
+      rawIdeas = getSubmittedIdeas();
+    }
+
+    filterExecutionProjects(rawIdeas, activeEmail, activeName, userRole);
   };
 
-  const filterExecutionProjects = (list) => {
-    const active = list.filter(
+  const filterExecutionProjects = (list, activeEmail = "", activeName = "", userRole = "") => {
+    let active = list.filter(
       (i) =>
         i.status.includes("In Execution") ||
         i.status.includes("Accepted by PM") ||
         i.status.includes("Project") ||
         i.status.includes("Approved by BA")
     );
+
+    if (userRole === "Project Manager") {
+      active = active.filter((i) => {
+        const assignedPMStr = (i.assignedPM || "").toLowerCase();
+        if (!assignedPMStr) return false;
+        if (activeEmail && assignedPMStr.includes(activeEmail.toLowerCase())) return true;
+        if (activeName && assignedPMStr.includes(activeName.toLowerCase())) return true;
+        return false;
+      });
+    }
+
     setProjects(active);
   };
 
   const handleUpdateStatus = (id, newStatus) => {
     const updated = updateIdeaStatus(id, newStatus, `Execution update: ${newStatus}`);
     filterExecutionProjects(updated);
-    alert(`Project status updated to "${newStatus}"!`);
+    toast.success(`Project status updated to "${newStatus}"!`);
   };
 
   return (

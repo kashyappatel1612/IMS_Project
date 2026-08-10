@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   UserCheck,
   Plus,
@@ -10,19 +11,29 @@ import {
   Tag,
   Inbox,
   Users,
-  Send
+  Send,
+  Activity,
+  Layers
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
+import IdeaPipelineStepper from "../../components/IdeaPipelineStepper";
+import IdeaJourneyModal from "../../components/IdeaJourneyModal";
+import WorkloadBalancingBox from "../../components/WorkloadBalancingBox";
+import { getCandidateWorkload } from "../../utils/workloadUtils";
 import { getSubmittedIdeas, updateIdeaAllocation, DEFAULT_MASTER_EVALUATORS } from "../../utils/ideaStorage";
 import { createNotification } from "../../utils/notificationStorage";
+import { fetchEvaluators, updateIdeaAllocationAPI } from "../../services/api";
 
 function ReviewerAllocationStudio() {
   const navigate = useNavigate();
   const [ideas, setIdeas] = useState([]);
   const [evaluators, setEvaluators] = useState(DEFAULT_MASTER_EVALUATORS);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Journey Tracker Modal State
+  const [selectedIdeaForJourney, setSelectedIdeaForJourney] = useState(null);
 
   // Allocation Modal State
   const [selectedIdeaForAllocation, setSelectedIdeaForAllocation] = useState(null);
@@ -37,7 +48,33 @@ function ReviewerAllocationStudio() {
   const [successBanner, setSuccessBanner] = useState("");
 
   useEffect(() => {
-    setIdeas(getSubmittedIdeas());
+    const updateAll = () => {
+      setIdeas(getSubmittedIdeas());
+      loadEvaluators();
+    };
+
+    async function loadEvaluators() {
+      try {
+        const evals = await fetchEvaluators();
+        if (evals && evals.length > 0) {
+          setEvaluators(evals);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch dynamic evaluators from backend:", err);
+      }
+    }
+
+    updateAll();
+
+    window.addEventListener("storage", updateAll);
+    window.addEventListener("ideaStatusChanged", updateAll);
+    window.addEventListener("ideaAllocationChanged", updateAll);
+
+    return () => {
+      window.removeEventListener("storage", updateAll);
+      window.removeEventListener("ideaStatusChanged", updateAll);
+      window.removeEventListener("ideaAllocationChanged", updateAll);
+    };
   }, []);
 
   const openAllocationModal = (idea) => {
@@ -72,13 +109,26 @@ function ReviewerAllocationStudio() {
     setCoordinatorNotes(idea.coordinatorNotes || "");
   };
 
-  const handleSaveAllocation = (e) => {
+  const handleSaveAllocation = async (e) => {
     e.preventDefault();
     if (!selectedIdeaForAllocation) return;
 
     setIsAllocating(true);
 
     try {
+      // 1. Update Backend Database
+      await updateIdeaAllocationAPI(selectedIdeaForAllocation.id, {
+        assignedReviewer,
+        reviewerDeadline,
+        assignedBA,
+        baDeadline,
+        assignedPM,
+        pmDeadline,
+        coordinatorNotes,
+        status: selectedIdeaForAllocation.status || "Assigned by Project Coordinator"
+      });
+
+      // 2. Update Local Storage Cache
       updateIdeaAllocation(selectedIdeaForAllocation.id, {
         assignedReviewer,
         reviewerDeadline,
@@ -87,7 +137,7 @@ function ReviewerAllocationStudio() {
         assignedPM,
         pmDeadline,
         coordinatorNotes,
-        status: "Assigned by Project Coordinator"
+        status: selectedIdeaForAllocation.status || "Assigned by Project Coordinator"
       });
 
       // Send instant notifications
@@ -123,7 +173,7 @@ function ReviewerAllocationStudio() {
       setIdeas(getSubmittedIdeas());
     } catch (err) {
       console.error(err);
-      alert("Failed to update allocation.");
+      toast.error("Failed to update allocation.");
     } finally {
       setIsAllocating(false);
     }
@@ -143,7 +193,7 @@ function ReviewerAllocationStudio() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <h1>Allocate Roles & Domain Experts Studio</h1>
             <span className="category-chip-indigo">
-              <UserCheck size={14} /> Stage 1: Role Allocation
+              <UserCheck size={14} /> Stage 2: Expert Allocation
             </span>
           </div>
           <p>Assign Business, Functional, and Technical Reviewers, Business Analysts, and Project Managers to proposals.</p>
@@ -190,11 +240,11 @@ function ReviewerAllocationStudio() {
               <tr>
                 <th>Idea ID & Title</th>
                 <th>Domain Category</th>
+                <th>Lifecycle Progress</th>
                 <th>Assigned Reviewer</th>
                 <th>Assigned BA</th>
                 <th>Assigned PM</th>
-                <th>Allocation Status</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -214,11 +264,15 @@ function ReviewerAllocationStudio() {
                   return (
                     <tr key={i.id}>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
                           <span className="table-idea-title">{i.title}</span>
+                          <span style={{ fontSize: "11px", color: "#64748b" }}>IDEA-{i.id}</span>
                         </div>
                       </td>
                       <td><span className="category-chip">{i.category}</span></td>
+                      <td>
+                        <IdeaPipelineStepper idea={i} compact={true} />
+                      </td>
                       <td>
                         <span style={{ fontSize: "12px", fontWeight: "700", color: "#4f46e5" }}>
                           {i.assignedReviewer ? i.assignedReviewer.split("(")[0] : "Needs Allocation"}
@@ -235,19 +289,24 @@ function ReviewerAllocationStudio() {
                         </span>
                       </td>
                       <td>
-                        <span className="table-badge badge-approved">
-                          {isAllocated ? "Roles Allocated" : "Pending Allocation"}
-                        </span>
-                      </td>
-                      <td>
-                        <Button
-                          size="sm"
-                          variant={isAllocated ? "outline" : "primary"}
-                          icon={UserCheck}
-                          onClick={() => openAllocationModal(i)}
-                        >
-                          {isAllocated ? "Reassign Roles" : "Allocate Roles"}
-                        </Button>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            icon={Activity}
+                            onClick={() => setSelectedIdeaForJourney(i)}
+                          >
+                            Track Journey
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={isAllocated ? "outline" : "primary"}
+                            icon={UserCheck}
+                            onClick={() => openAllocationModal(i)}
+                          >
+                            {isAllocated ? "Reassign" : "Allocate"}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -257,6 +316,16 @@ function ReviewerAllocationStudio() {
           </table>
         </div>
       </Card>
+
+      {/* TRACK JOURNEY MODAL */}
+      {selectedIdeaForJourney && (
+        <IdeaJourneyModal
+          idea={selectedIdeaForJourney}
+          isOpen={Boolean(selectedIdeaForJourney)}
+          onClose={() => setSelectedIdeaForJourney(null)}
+          onOpenAllocation={(ideaToAllocate) => openAllocationModal(ideaToAllocate)}
+        />
+      )}
 
       {/* ALLOCATION MODAL */}
       {selectedIdeaForAllocation && (
@@ -279,6 +348,7 @@ function ReviewerAllocationStudio() {
               <div><strong>Category Domain:</strong> <span className="category-chip">{selectedIdeaForAllocation.category}</span></div>
             </div>
 
+            {/* 1. Reviewer Allocation with Workload Balancing in Dropdown */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="input-field-group">
                 <label className="input-label">Select Reviewer *</label>
@@ -288,11 +358,14 @@ function ReviewerAllocationStudio() {
                   onChange={(e) => setAssignedReviewer(e.target.value)}
                   required
                 >
-                  {evaluators.filter((e) => e.role === "Reviewer").map((r) => (
-                    <option key={r.id} value={`${r.name} (${r.email})`}>
-                      {r.name} [{r.domain} Reviewer]
-                    </option>
-                  ))}
+                  {evaluators.filter((e) => e.role === "Reviewer").map((r) => {
+                    const wl = getCandidateWorkload(r.email || r.name, ideas);
+                    return (
+                      <option key={r.id} value={`${r.name} (${r.email})`}>
+                        {r.name} ({wl.activeCount} Active {wl.activeCount === 1 ? 'Idea' : 'Ideas'}) — {wl.status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -308,6 +381,7 @@ function ReviewerAllocationStudio() {
               </div>
             </div>
 
+            {/* 2. Business Analyst Allocation with Workload Balancing in Dropdown */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="input-field-group">
                 <label className="input-label">Select Business Analyst (BA) *</label>
@@ -317,11 +391,14 @@ function ReviewerAllocationStudio() {
                   onChange={(e) => setAssignedBA(e.target.value)}
                   required
                 >
-                  {evaluators.filter((e) => e.role === "Business Analyst").map((b) => (
-                    <option key={b.id} value={`${b.name} (${b.email})`}>
-                      {b.name} [{b.domain} BA]
-                    </option>
-                  ))}
+                  {evaluators.filter((e) => e.role === "Business Analyst").map((b) => {
+                    const wl = getCandidateWorkload(b.email || b.name, ideas);
+                    return (
+                      <option key={b.id} value={`${b.name} (${b.email})`}>
+                        {b.name} ({wl.activeCount} Active {wl.activeCount === 1 ? 'Idea' : 'Ideas'}) — {wl.status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -337,6 +414,7 @@ function ReviewerAllocationStudio() {
               </div>
             </div>
 
+            {/* 3. Project Manager Allocation with Workload Balancing in Dropdown */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="input-field-group">
                 <label className="input-label">Select Project Manager (PM) *</label>
@@ -346,11 +424,14 @@ function ReviewerAllocationStudio() {
                   onChange={(e) => setAssignedPM(e.target.value)}
                   required
                 >
-                  {evaluators.filter((e) => e.role === "Project Manager").map((p) => (
-                    <option key={p.id} value={`${p.name} (${p.email})`}>
-                      {p.name} [{p.domain} PM]
-                    </option>
-                  ))}
+                  {evaluators.filter((e) => e.role === "Project Manager").map((p) => {
+                    const wl = getCandidateWorkload(p.email || p.name, ideas);
+                    return (
+                      <option key={p.id} value={`${p.name} (${p.email})`}>
+                        {p.name} ({wl.activeCount} Active {wl.activeCount === 1 ? 'Idea' : 'Ideas'}) — {wl.status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

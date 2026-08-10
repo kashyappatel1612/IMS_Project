@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   CheckSquare,
   Plus,
@@ -46,7 +47,7 @@ function TaskManagementStudio() {
     setTasks([newT, ...tasks]);
     setShowAddModal(false);
     setTaskTitle("");
-    alert(`Task ${newT.id} created and assigned to ${assignee}!`);
+    toast.success(`Task ${newT.id} created and assigned to ${assignee}!`);
   };
 
   return (

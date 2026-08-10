@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   UserCheck,
   Clock,
@@ -17,24 +18,38 @@ import {
   Filter,
   Lightbulb,
   BarChart,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp,
+  Activity,
+  Layers,
+  ChevronRight
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
-import { fetchAllIdeas, fetchEvaluators, postEvaluator } from "../../services/api";
+import IdeaPipelineStepper from "../../components/IdeaPipelineStepper";
+import IdeaJourneyModal from "../../components/IdeaJourneyModal";
+import AssignUserModal from "../../components/AssignUserModal";
+import WorkloadBalancingBox from "../../components/WorkloadBalancingBox";
+import { getCandidateWorkload } from "../../utils/workloadUtils";
+import { getIdeaPipelineStatus, LIFECYCLE_STAGES } from "../../utils/ideaPipeline";
+import { fetchAllIdeas, fetchEvaluators, postEvaluator, createAssignmentAPI, fetchUsersByRole, updateIdeaAllocationAPI } from "../../services/api";
 import { getSubmittedIdeas, updateIdeaAllocation, DEFAULT_MASTER_EVALUATORS } from "../../utils/ideaStorage";
 import { createNotification } from "../../utils/notificationStorage";
 
 function PCDashboard({ userName = "Project Coordinator" }) {
   const navigate = useNavigate();
   const [ideas, setIdeas] = useState([]);
-  const [activeTab, setActiveTab] = useState("all"); // 'pending' | 'under_review' | 'ready_project' | 'evaluators' | 'all'
+  const [activeTab, setActiveTab] = useState("all"); // 'all' | stage ID (1-8) | 'evaluators'
   const [searchQuery, setSearchQuery] = useState("");
 
   // Evaluators Master List State
   const [evaluatorsList, setEvaluatorsList] = useState(DEFAULT_MASTER_EVALUATORS);
   const [selectedDomainFilter, setSelectedDomainFilter] = useState("All Domains");
+
+  // Modals State
+  const [selectedIdeaForJourney, setSelectedIdeaForJourney] = useState(null);
+  const [selectedIdeaForAssignModal, setSelectedIdeaForAssignModal] = useState(null);
 
   // Allocation Modal State
   const [selectedIdeaForAllocation, setSelectedIdeaForAllocation] = useState(null);
@@ -59,6 +74,21 @@ function PCDashboard({ userName = "Project Coordinator" }) {
   useEffect(() => {
     loadData();
     loadEvaluators();
+
+    const handleUpdate = () => {
+      loadData();
+      loadEvaluators();
+    };
+
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("ideaStatusChanged", handleUpdate);
+    window.addEventListener("ideaAllocationChanged", handleUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("ideaStatusChanged", handleUpdate);
+      window.removeEventListener("ideaAllocationChanged", handleUpdate);
+    };
   }, []);
 
   const loadData = async () => {
@@ -71,13 +101,13 @@ function PCDashboard({ userName = "Project Coordinator" }) {
           if (localMatch) {
             return {
               ...bIdea,
-              assignedReviewer: bIdea.assignedReviewer || localMatch.assignedReviewer || "",
-              assignedBA: bIdea.assignedBA || localMatch.assignedBA || "",
-              assignedPM: bIdea.assignedPM || localMatch.assignedPM || "",
-              reviewerDeadline: bIdea.reviewerDeadline || localMatch.reviewerDeadline || "",
-              baDeadline: bIdea.baDeadline || localMatch.baDeadline || "",
-              pmDeadline: bIdea.pmDeadline || localMatch.pmDeadline || "",
-              coordinatorNotes: bIdea.coordinatorNotes || localMatch.coordinatorNotes || ""
+              assignedReviewer: localMatch.assignedReviewer || bIdea.assignedReviewer || "",
+              assignedBA: localMatch.assignedBA || bIdea.assignedBA || "",
+              assignedPM: localMatch.assignedPM || bIdea.assignedPM || "",
+              reviewerDeadline: localMatch.reviewerDeadline || bIdea.reviewerDeadline || "",
+              baDeadline: localMatch.baDeadline || bIdea.baDeadline || "",
+              pmDeadline: localMatch.pmDeadline || bIdea.pmDeadline || "",
+              coordinatorNotes: localMatch.coordinatorNotes || bIdea.coordinatorNotes || ""
             };
           }
           return bIdea;
@@ -132,18 +162,86 @@ function PCDashboard({ userName = "Project Coordinator" }) {
     setCoordinatorNotes(idea.coordinatorNotes || "");
   };
 
-  const handleSaveAllocation = (e) => {
+  const handleSaveAllocation = async (e) => {
     e.preventDefault();
     if (!selectedIdeaForAllocation) return;
 
     if (!reviewerDeadline || !pmDeadline) {
-      alert("Please specify deadlines for Reviewer and Project Manager.");
+      toast("Please specify deadlines for Reviewer and Project Manager.", { icon: "⚠️" });
       return;
     }
 
     setIsAllocating(true);
 
     try {
+      // 1. Update Backend Database Idea Allocation
+      try {
+        await updateIdeaAllocationAPI(selectedIdeaForAllocation.id, {
+          assignedReviewer,
+          reviewerDeadline,
+          assignedBA,
+          baDeadline,
+          assignedPM,
+          pmDeadline,
+          coordinatorNotes,
+          status: selectedIdeaForAllocation.status || "Assigned by Project Coordinator"
+        });
+      } catch (err) {
+        console.warn("Backend allocation update warning:", err);
+      }
+
+      // 2. Sync DB assignments table for assigned BA, PM, and Reviewer
+      if (assignedBA) {
+        const baEmail = assignedBA.includes("(") ? assignedBA.split("(")[1].replace(")", "").trim() : "";
+        fetchUsersByRole("Business Analyst").then((users) => {
+          const matchUser = users.find((u) => u.email.toLowerCase() === baEmail.toLowerCase() || assignedBA.toLowerCase().includes(u.username.toLowerCase()));
+          if (matchUser) {
+            createAssignmentAPI({
+              ideaId: selectedIdeaForAllocation.id,
+              assignedRole: "Business Analyst",
+              assignedUserId: matchUser.id,
+              remarks: coordinatorNotes || "Assigned by Project Coordinator",
+              status: "Pending",
+              deadline: baDeadline
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+
+      if (assignedPM) {
+        const pmEmail = assignedPM.includes("(") ? assignedPM.split("(")[1].replace(")", "").trim() : "";
+        fetchUsersByRole("Project Manager").then((users) => {
+          const matchUser = users.find((u) => u.email.toLowerCase() === pmEmail.toLowerCase() || assignedPM.toLowerCase().includes(u.username.toLowerCase()));
+          if (matchUser) {
+            createAssignmentAPI({
+              ideaId: selectedIdeaForAllocation.id,
+              assignedRole: "Project Manager",
+              assignedUserId: matchUser.id,
+              remarks: coordinatorNotes || "Assigned by Project Coordinator",
+              status: "Pending",
+              deadline: pmDeadline
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+
+      if (assignedReviewer) {
+        const revEmail = assignedReviewer.includes("(") ? assignedReviewer.split("(")[1].replace(")", "").trim() : "";
+        fetchUsersByRole("Reviewer").then((users) => {
+          const matchUser = users.find((u) => u.email.toLowerCase() === revEmail.toLowerCase() || assignedReviewer.toLowerCase().includes(u.username.toLowerCase()));
+          if (matchUser) {
+            createAssignmentAPI({
+              ideaId: selectedIdeaForAllocation.id,
+              assignedRole: "Reviewer",
+              assignedUserId: matchUser.id,
+              remarks: coordinatorNotes || "Assigned by Project Coordinator",
+              status: "Pending",
+              deadline: reviewerDeadline
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+
       updateIdeaAllocation(selectedIdeaForAllocation.id, {
         assignedReviewer,
         reviewerDeadline,
@@ -152,10 +250,10 @@ function PCDashboard({ userName = "Project Coordinator" }) {
         assignedPM,
         pmDeadline,
         coordinatorNotes,
-        status: "Assigned by Project Coordinator"
+        status: selectedIdeaForAllocation.status || "Assigned by Project Coordinator"
       });
 
-      // Send instant notifications to Reviewer, Business Analyst, and Project Manager
+      // Notifications
       createNotification({
         recipientRole: "Reviewer",
         recipientEmail: assignedReviewer.includes("(") ? assignedReviewer.split("(")[1].replace(")", "").trim() : null,
@@ -183,7 +281,6 @@ function PCDashboard({ userName = "Project Coordinator" }) {
         type: "allocation"
       });
 
-      const domainName = selectedIdeaForAllocation.category || "General";
       setAllocationSuccessBanner(
         `Allocation successful for proposal "${selectedIdeaForAllocation.title}"! Instant notifications sent to Reviewer, BA, and PM.`
       );
@@ -192,7 +289,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
       loadData();
     } catch (err) {
       console.error(err);
-      alert("Failed to update allocation.");
+      toast.error("Failed to update allocation.");
     } finally {
       setIsAllocating(false);
     }
@@ -201,7 +298,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
   const handleAddExpertSubmit = async (e) => {
     e.preventDefault();
     if (!newExpertName.trim() || !newExpertEmail.trim()) {
-      alert("Please fill in Name and Email!");
+      toast("Please fill in Name and Email!", { icon: "⚠️" });
       return;
     }
 
@@ -223,30 +320,41 @@ function PCDashboard({ userName = "Project Coordinator" }) {
     setShowAddExpertModal(false);
     setNewExpertName("");
     setNewExpertEmail("");
-    alert(`Domain Expert "${payload.name}" (${payload.domain} - ${payload.role}) registered successfully!`);
+    toast.success(`Domain Expert "${payload.name}" (${payload.domain} - ${payload.role}) registered successfully!`);
   };
 
-  // KPI CALCULATIONS
-  const totalSubmissions = ideas.length;
-  const pendingAllocationCount = ideas.filter((i) => i.status === "Pending PC Allocation" || i.status === "Pending Review" || !i.assignedReviewer).length;
-  const underReviewCount = ideas.filter((i) => i.status.includes("Review") || i.status.includes("Assigned")).length;
-  const baAnalysisCount = ideas.filter((i) => i.status.includes("Feasibility Approved") || i.status.includes("Business Analysis")).length;
-  const readyForProjectCount = ideas.filter((i) => i.status.includes("Approved by BA") || i.status.includes("Accepted by PM")).length;
+  // Compute Stage Stats for Ideas
+  const ideasWithPipeline = ideas.map((idea) => ({
+    ...idea,
+    pipeline: getIdeaPipelineStatus(idea)
+  }));
 
-  // Filter Ideas
-  const filteredIdeas = ideas.filter((idea) => {
+  const totalSubmissions = ideas.length;
+  const pendingAllocationCount = ideasWithPipeline.filter((i) => i.pipeline.currentStageIndex === 1).length;
+  const underReviewCount = ideasWithPipeline.filter((i) => i.pipeline.currentStageIndex === 3 || i.pipeline.currentStageIndex === 2).length;
+  const baAnalysisCount = ideasWithPipeline.filter((i) => i.pipeline.currentStageIndex === 4 || i.pipeline.currentStageIndex === 5).length;
+  const inExecutionCount = ideasWithPipeline.filter((i) => i.pipeline.currentStageIndex === 6 || i.pipeline.currentStageIndex === 7).length;
+  const completedCount = ideasWithPipeline.filter((i) => i.pipeline.currentStageIndex === 8).length;
+
+  // Filter Ideas by Search Query & Active Stage Tab
+  const filteredIdeas = ideasWithPipeline.filter((idea) => {
     const matchesSearch =
       idea.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (idea.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (idea.author && idea.author.toLowerCase().includes(searchQuery.toLowerCase()));
+      (idea.author && idea.author.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      String(idea.id).includes(searchQuery);
 
     if (!matchesSearch) return false;
 
-    if (activeTab === "pending") return idea.status === "Pending PC Allocation" || idea.status === "Pending Review" || !idea.assignedReviewer;
-    if (activeTab === "under_review") return idea.status.includes("Review") || idea.status.includes("Assigned");
-    if (activeTab === "ba_pending") return idea.status.includes("Feasibility Approved") || idea.status.includes("Business Analysis");
-    if (activeTab === "ready_project") return idea.status.includes("Approved by BA") || idea.status.includes("Accepted by PM");
-    return true; // 'all'
+    if (activeTab === "all") return true;
+    if (activeTab === "pending_alloc") return idea.pipeline.currentStageIndex === 1;
+    if (activeTab === "under_review") return idea.pipeline.currentStageIndex === 2 || idea.pipeline.currentStageIndex === 3;
+    if (activeTab === "ba_estimation") return idea.pipeline.currentStageIndex === 4 || idea.pipeline.currentStageIndex === 5;
+    if (activeTab === "pm_execution") return idea.pipeline.currentStageIndex === 6 || idea.pipeline.currentStageIndex === 7;
+    if (activeTab === "completed") return idea.pipeline.currentStageIndex === 8;
+    if (typeof activeTab === "number") return idea.pipeline.currentStageIndex === activeTab;
+
+    return true;
   });
 
   // Filter Evaluators
@@ -260,17 +368,19 @@ function PCDashboard({ userName = "Project Coordinator" }) {
       {/* Clean Header Banner */}
       <div className="dashboard-header-flex" style={{ marginBottom: "20px" }}>
         <div className="dash-title-box">
-          <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>
-            Project Coordinator Command Center
-          </h1>
-          <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0 0" }}>
-            Allocate domain experts (Reviewers, BAs, PMs), monitor review stages, and approve project creation.
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+              Project Coordinator End-to-End Idea Command Center
+            </h1>
+            <span className="mode-badge-green" style={{ background: "#e0e7ff", color: "#4338ca" }}>
+              <Layers size={14} /> Full Lifecycle View
+            </span>
+          </div>
         </div>
 
         <div className="quick-actions-flex" style={{ display: "flex", gap: "10px" }}>
           <Button variant="primary" icon={Plus} onClick={() => setShowAddExpertModal(true)}>
-            Register Domain Expert
+            Register Expert
           </Button>
           <Button variant="outline" icon={Users} onClick={() => setActiveTab("evaluators")}>
             Experts Directory ({evaluatorsList.length})
@@ -300,79 +410,100 @@ function PCDashboard({ userName = "Project Coordinator" }) {
         </div>
       )}
 
-      {/* 4 CLEAN SPACIOUS KPI CARDS */}
-      <div className="kpi-6-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "24px" }}>
+      {/* 5 MILESTONE PIPELINE KPI CARDS */}
+      <div className="kpi-6-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)", marginBottom: "20px" }}>
         {/* Card 1: Pending Allocation */}
         <div
           className="kpi-mini-card"
-          onClick={() => setActiveTab("pending")}
-          style={{ cursor: "pointer", border: activeTab === "pending" ? "2px solid #4f46e5" : "1px solid #e2e8f0" }}
+          onClick={() => setActiveTab("pending_alloc")}
+          style={{ cursor: "pointer", border: activeTab === "pending_alloc" ? "2px solid #ef4444" : "1px solid #e2e8f0" }}
+          title="Click to view Stage 1 Ideas needing PC Allocation"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">Pending Allocation</span>
-            <div className="kpi-icon-pill pill-purple">
+            <span className="kpi-label-txt">Stage 1: Needs Allocation</span>
+            <div className="kpi-icon-pill pill-red">
               <Clock size={18} />
             </div>
           </div>
-          <span className="kpi-num-val">{pendingAllocationCount}</span>
+          <span className="kpi-num-val" style={{ color: "#dc2626" }}>{pendingAllocationCount}</span>
         </div>
 
-        {/* Card 2: Ideas Under Review */}
+        {/* Card 2: Screening & Review */}
         <div
           className="kpi-mini-card"
           onClick={() => setActiveTab("under_review")}
-          style={{ cursor: "pointer", border: activeTab === "under_review" ? "2px solid #3b82f6" : "1px solid #e2e8f0" }}
+          style={{ cursor: "pointer", border: activeTab === "under_review" ? "2px solid #4f46e5" : "1px solid #e2e8f0" }}
+          title="Click to view Ideas under Feasibility Review"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">Under Review</span>
-            <div className="kpi-icon-pill pill-blue">
-              <FileCheck size={18} />
+            <span className="kpi-label-txt">Stage 2-3: Review & Screening</span>
+            <div className="kpi-icon-pill pill-purple">
+              <ShieldCheck size={18} />
             </div>
           </div>
           <span className="kpi-num-val">{underReviewCount}</span>
         </div>
 
-        {/* Card 3: Business Analysis Pending */}
+        {/* Card 3: BA Analysis & Estimation */}
         <div
           className="kpi-mini-card"
-          onClick={() => setActiveTab("ba_pending")}
-          style={{ cursor: "pointer", border: activeTab === "ba_pending" ? "2px solid #8b5cf6" : "1px solid #e2e8f0" }}
+          onClick={() => setActiveTab("ba_estimation")}
+          style={{ cursor: "pointer", border: activeTab === "ba_estimation" ? "2px solid #0891b2" : "1px solid #e2e8f0" }}
+          title="Click to view Ideas in Business Analysis & Estimation"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">BA Analysis Pending</span>
-            <div className="kpi-icon-pill pill-purple">
+            <span className="kpi-label-txt">Stage 4-5: BA & Estimation</span>
+            <div className="kpi-icon-pill pill-blue">
               <BarChart size={18} />
             </div>
           </div>
-          <span className="kpi-num-val">{baAnalysisCount}</span>
+          <span className="kpi-num-val" style={{ color: "#0891b2" }}>{baAnalysisCount}</span>
         </div>
 
-        {/* Card 4: Ready for Project Creation */}
+        {/* Card 4: PM Execution & QA */}
         <div
           className="kpi-mini-card"
-          onClick={() => setActiveTab("ready_project")}
-          style={{ cursor: "pointer", border: activeTab === "ready_project" ? "2px solid #22c55e" : "1px solid #e2e8f0" }}
+          onClick={() => setActiveTab("pm_execution")}
+          style={{ cursor: "pointer", border: activeTab === "pm_execution" ? "2px solid #d97706" : "1px solid #e2e8f0" }}
+          title="Click to view Ideas in Execution & QA"
         >
           <div className="kpi-top-row">
-            <span className="kpi-label-txt">Ready for Project</span>
-            <div className="kpi-icon-pill pill-green">
+            <span className="kpi-label-txt">Stage 6-7: Execution & QA</span>
+            <div className="kpi-icon-pill pill-amber">
               <FolderKanban size={18} />
             </div>
           </div>
-          <span className="kpi-num-val">{readyForProjectCount}</span>
+          <span className="kpi-num-val" style={{ color: "#d97706" }}>{inExecutionCount}</span>
+        </div>
+
+        {/* Card 5: Completed & Live */}
+        <div
+          className="kpi-mini-card"
+          onClick={() => setActiveTab("completed")}
+          style={{ cursor: "pointer", border: activeTab === "completed" ? "2px solid #22c55e" : "1px solid #e2e8f0" }}
+          title="Click to view Completed Live Proposals"
+        >
+          <div className="kpi-top-row">
+            <span className="kpi-label-txt">Stage 8: Live & Completed</span>
+            <div className="kpi-icon-pill pill-green">
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+          <span className="kpi-num-val" style={{ color: "#16a34a" }}>{completedCount}</span>
         </div>
       </div>
 
-      {/* SLEEK PILL FILTER TABS & SEARCH BAR */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        {/* Soft Rounded Pill Tabs (No ugly grey box borders) */}
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+      {/* SLEEK STAGE FILTER TABS & SEARCH BAR */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+        {/* Soft Stage Pills */}
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
           {[
             { id: "all", label: `All Proposals (${totalSubmissions})` },
-            { id: "pending", label: `Pending Allocation (${pendingAllocationCount})` },
-            { id: "under_review", label: `Under Review (${underReviewCount})` },
-            { id: "ba_pending", label: `BA Analysis (${baAnalysisCount})` },
-            { id: "ready_project", label: `Ready for Project (${readyForProjectCount})` },
+            { id: "pending_alloc", label: `Stage 1: Needs Allocation (${pendingAllocationCount})` },
+            { id: "under_review", label: `Stage 2-3: Review (${underReviewCount})` },
+            { id: "ba_estimation", label: `Stage 4-5: BA/Estimation (${baAnalysisCount})` },
+            { id: "pm_execution", label: `Stage 6-7: Execution (${inExecutionCount})` },
+            { id: "completed", label: `Stage 8: Live (${completedCount})` },
             { id: "evaluators", label: `Experts Directory (${evaluatorsList.length})` }
           ].map((tab) => {
             const isSelected = activeTab === tab.id;
@@ -384,9 +515,9 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                   background: isSelected ? "#4f46e5" : "#f1f5f9",
                   color: isSelected ? "#ffffff" : "#475569",
                   border: "none",
-                  padding: "8px 16px",
+                  padding: "7px 14px",
                   borderRadius: "20px",
-                  fontSize: "13px",
+                  fontSize: "12px",
                   fontWeight: isSelected ? "700" : "500",
                   cursor: "pointer",
                   transition: "all 0.2s ease",
@@ -399,16 +530,16 @@ function PCDashboard({ userName = "Project Coordinator" }) {
           })}
         </div>
 
-        {/* Search Input */}
+        {/* Search Bar */}
         <div style={{ position: "relative", width: "240px" }}>
           <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
           <input
             type="text"
             className="custom-input-elem"
-            placeholder="Search proposals..."
+            placeholder="Search proposals, domain, ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ paddingLeft: "36px", height: "38px", fontSize: "13px", borderRadius: "20px" }}
+            style={{ paddingLeft: "36px", height: "36px", fontSize: "12px", borderRadius: "18px" }}
           />
         </div>
       </div>
@@ -416,30 +547,29 @@ function PCDashboard({ userName = "Project Coordinator" }) {
       {/* SECTION 1: MASTER IDEAS LIFECYCLE TABLE */}
       {activeTab !== "evaluators" ? (
         <Card
-          title={`Proposals Queue (${filteredIdeas.length})`}
-          subtitle="Assign domain experts, track review progress, and approve project creation"
+          title={`Proposals End-to-End Pipeline Queue (${filteredIdeas.length})`}
+          subtitle="Real-time stage tracking, assigned stakeholders, progress percentage, and audit journey"
         >
           <div className="data-table-wrapper">
             <table className="enterprise-table">
               <thead>
                 <tr>
-                  <th>Idea ID & Title</th>
+                  <th>Idea Title & ID</th>
                   <th>Domain</th>
                   <th>Author</th>
-                  <th>Assigned Reviewer</th>
-                  <th>Assigned BA</th>
-                  <th>Assigned PM</th>
-                  <th>Status</th>
-                  <th>Action</th>
+                  <th>Current Stage & Status</th>
+                  <th>Lifecycle Progress %</th>
+                  <th>Assigned Reviewer / BA / PM</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredIdeas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="empty-state-cell">
+                    <td colSpan={7} className="empty-state-cell">
                       <div className="empty-state-flex" style={{ padding: "30px 0" }}>
                         <Inbox size={36} color="var(--text-light)" />
-                        <span className="empty-state-title">No proposals found in queue</span>
+                        <span className="empty-state-title">No proposals found in selected lifecycle stage</span>
                       </div>
                     </td>
                   </tr>
@@ -450,8 +580,9 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                     return (
                       <tr key={idea.id}>
                         <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <div style={{ display: "flex", flexDirection: "column" }}>
                             <span className="table-idea-title">{idea.title}</span>
+                            <span style={{ fontSize: "11px", color: "#64748b" }}>ID: IDEA-{idea.id}</span>
                           </div>
                         </td>
                         <td>
@@ -459,36 +590,41 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                         </td>
                         <td style={{ fontSize: "13px", fontWeight: "600" }}>{idea.author}</td>
                         <td>
-                          {idea.assignedReviewer ? (
-                            <span style={{ fontSize: "12px", fontWeight: "700", color: "#4f46e5" }}>
-                              {idea.assignedReviewer.split("(")[0]}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <span style={{ fontSize: "11px", fontWeight: "800", color: "#4f46e5", textTransform: "uppercase" }}>
+                              S{idea.pipeline.currentStageIndex}: {idea.pipeline.currentStageName}
                             </span>
-                          ) : (
-                            <span style={{ fontSize: "11px", color: "#dc2626", fontWeight: "700", background: "#fee2e2", padding: "2px 8px", borderRadius: "10px" }}>
-                              Needs Reviewer
+                            <span
+                              className={`table-badge ${idea.pipeline.isRejected ? "badge-rejected" : idea.pipeline.percent === 100 ? "badge-approved" : "badge-review"}`}
+                            >
+                              {idea.status}
                             </span>
-                          )}
+                          </div>
                         </td>
                         <td>
-                          {idea.assignedBA ? (
-                            <span style={{ fontSize: "12px", fontWeight: "700", color: "#0891b2" }}>
-                              {idea.assignedBA.split("(")[0]}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Unassigned</span>
-                          )}
+                          <IdeaPipelineStepper idea={idea} compact={true} />
                         </td>
                         <td>
-                          {idea.assignedPM ? (
-                            <span style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a" }}>
-                              {idea.assignedPM.split("(")[0]}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Unassigned</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className="table-badge badge-approved">{idea.status}</span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "11px" }}>
+                            <div>
+                              <span style={{ color: "#64748b" }}>Rev: </span>
+                              <strong style={{ color: idea.assignedReviewer ? "#4f46e5" : "#dc2626" }}>
+                                {idea.assignedReviewer ? idea.assignedReviewer.split("(")[0] : "Needs Allocation"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span style={{ color: "#64748b" }}>BA: </span>
+                              <strong style={{ color: idea.assignedBA ? "#0891b2" : "#94a3b8" }}>
+                                {idea.assignedBA ? idea.assignedBA.split("(")[0] : "Unassigned"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span style={{ color: "#64748b" }}>PM: </span>
+                              <strong style={{ color: idea.assignedPM ? "#16a34a" : "#94a3b8" }}>
+                                {idea.assignedPM ? idea.assignedPM.split("(")[0] : "Unassigned"}
+                              </strong>
+                            </div>
+                          </div>
                         </td>
                         <td>
                           <div style={{ display: "flex", gap: "6px" }}>
@@ -497,16 +633,18 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                               variant={isAllocated ? "outline" : "primary"}
                               icon={UserCheck}
                               onClick={() => openAllocationModal(idea)}
+                              title="Allocate or reassign Reviewer, Business Analyst (BA), and Project Manager (PM)"
                             >
-                              {isAllocated ? "Reassign" : "Allocate Experts"}
+                              {isAllocated ? "Reassign Roles" : "Allocate Roles"}
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              icon={Eye}
-                              onClick={() => navigate(`/screening-evaluation/${idea.id}`)}
+                              icon={Activity}
+                              onClick={() => setSelectedIdeaForJourney(idea)}
+                              title="Track full end-to-end stage progress & audit timeline"
                             >
-                              View
+                              Track Progress
                             </Button>
                           </div>
                         </td>
@@ -589,6 +727,16 @@ function PCDashboard({ userName = "Project Coordinator" }) {
         </Card>
       )}
 
+      {/* MODAL: IDEA END-TO-END JOURNEY & PROGRESS TRACKER */}
+      {selectedIdeaForJourney && (
+        <IdeaJourneyModal
+          idea={selectedIdeaForJourney}
+          isOpen={Boolean(selectedIdeaForJourney)}
+          onClose={() => setSelectedIdeaForJourney(null)}
+          onOpenAllocation={(ideaToAllocate) => openAllocationModal(ideaToAllocate)}
+        />
+      )}
+
       {/* MODAL: DOMAIN EXPERTS ALLOCATION */}
       {selectedIdeaForAllocation && (
         <Modal
@@ -610,6 +758,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
               <div><strong>Category Domain:</strong> <span className="category-chip">{selectedIdeaForAllocation.category}</span></div>
             </div>
 
+            {/* 1. Reviewer Allocation with Workload Balancing in Dropdown */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="input-field-group">
                 <label className="input-label">Select Reviewer *</label>
@@ -619,11 +768,14 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                   onChange={(e) => setAssignedReviewer(e.target.value)}
                   required
                 >
-                  {evaluatorsList.filter((e) => e.role === "Reviewer").map((r) => (
-                    <option key={r.id} value={`${r.name} (${r.email})`}>
-                      {r.name} [{r.domain} Reviewer]
-                    </option>
-                  ))}
+                  {evaluatorsList.filter((e) => e.role === "Reviewer").map((r) => {
+                    const wl = getCandidateWorkload(r.email || r.name, ideas);
+                    return (
+                      <option key={r.id} value={`${r.name} (${r.email})`}>
+                        {r.name} ({wl.activeCount} Active {wl.activeCount === 1 ? 'Idea' : 'Ideas'}) — {wl.status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -639,6 +791,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
               </div>
             </div>
 
+            {/* 2. Business Analyst Allocation with Workload Balancing in Dropdown */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="input-field-group">
                 <label className="input-label">Select Business Analyst (BA) *</label>
@@ -648,11 +801,14 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                   onChange={(e) => setAssignedBA(e.target.value)}
                   required
                 >
-                  {evaluatorsList.filter((e) => e.role === "Business Analyst").map((b) => (
-                    <option key={b.id} value={`${b.name} (${b.email})`}>
-                      {b.name} [{b.domain} BA]
-                    </option>
-                  ))}
+                  {evaluatorsList.filter((e) => e.role === "Business Analyst").map((b) => {
+                    const wl = getCandidateWorkload(b.email || b.name, ideas);
+                    return (
+                      <option key={b.id} value={`${b.name} (${b.email})`}>
+                        {b.name} ({wl.activeCount} Active {wl.activeCount === 1 ? 'Idea' : 'Ideas'}) — {wl.status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -668,6 +824,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
               </div>
             </div>
 
+            {/* 3. Project Manager Allocation with Workload Balancing in Dropdown */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="input-field-group">
                 <label className="input-label">Select Project Manager (PM) *</label>
@@ -677,11 +834,14 @@ function PCDashboard({ userName = "Project Coordinator" }) {
                   onChange={(e) => setAssignedPM(e.target.value)}
                   required
                 >
-                  {evaluatorsList.filter((e) => e.role === "Project Manager").map((p) => (
-                    <option key={p.id} value={`${p.name} (${p.email})`}>
-                      {p.name} [{p.domain} PM]
-                    </option>
-                  ))}
+                  {evaluatorsList.filter((e) => e.role === "Project Manager").map((p) => {
+                    const wl = getCandidateWorkload(p.email || p.name, ideas);
+                    return (
+                      <option key={p.id} value={`${p.name} (${p.email})`}>
+                        {p.name} ({wl.activeCount} Active {wl.activeCount === 1 ? 'Idea' : 'Ideas'}) — {wl.status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -787,6 +947,16 @@ function PCDashboard({ userName = "Project Coordinator" }) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* MODAL: ASSIGN USER TO WORKFLOW STAGE */}
+      {selectedIdeaForAssignModal && (
+        <AssignUserModal
+          idea={selectedIdeaForAssignModal}
+          isOpen={Boolean(selectedIdeaForAssignModal)}
+          onClose={() => setSelectedIdeaForAssignModal(null)}
+          onAssignmentComplete={() => loadData()}
+        />
       )}
     </div>
   );

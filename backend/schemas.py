@@ -42,10 +42,6 @@ class IdeaCreateRequest(BaseModel):
     expectedOutcome: Optional[str] = ""
     attachment: Optional[Any] = None
 
-
-
-
-
 class IdeaStatusUpdateRequest(BaseModel):
     status: str
     evaluatorNotes: Optional[str] = ""
@@ -72,4 +68,19 @@ class EvaluatorCreateRequest(BaseModel):
     domain: str
     department: Optional[str] = ""
 
+class AssignmentCreateRequest(BaseModel):
+    ideaId: int
+    assignedRole: str
+    assignedUserId: int
+    remarks: Optional[str] = ""
+    status: Optional[str] = "Pending"
+    deadline: Optional[str] = ""
 
+class NotificationCreateRequest(BaseModel):
+    recipientUserId: Optional[int] = None
+    recipientEmail: Optional[str] = None
+    recipientRole: Optional[str] = None
+    title: str
+    message: str
+    ideaId: Optional[int] = None
+    type: Optional[str] = "allocation"

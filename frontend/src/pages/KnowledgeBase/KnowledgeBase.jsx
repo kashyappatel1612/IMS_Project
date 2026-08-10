@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import {
   BookOpen,
   Search,
@@ -333,14 +334,14 @@ function KnowledgeBase() {
   };
 
   const handleDownloadTemplate = (templateName) => {
-    alert(`Downloading template: "${templateName}"\nFile download will start automatically.`);
+    toast.success("Download started. Your template is downloading.");
   };
 
   // Admin Handler: Publish New Knowledge Base Article
   const handlePublishArticle = (e) => {
     e.preventDefault();
     if (!newTitle.trim() || !newSummary.trim() || !newContent.trim()) {
-      alert("Please fill in Title, Summary, and Article Body.");
+      toast("Please fill in Title, Summary, and Article Body.", { icon: "⚠️" });
       return;
     }
 
@@ -364,11 +365,13 @@ function KnowledgeBase() {
     setArticles([createdArticle, ...articles]);
     setIsAddModalOpen(false);
 
-    // Reset Form
+    // Reset Form fields
     setNewTitle("");
     setNewSummary("");
     setNewContent("");
-    alert("New Knowledge Article published successfully!");
+    setNewReadTime("5 min read");
+    
+    toast.success("New Knowledge Article published successfully!");
   };
 
   return (
@@ -410,7 +413,7 @@ function KnowledgeBase() {
             </Button>
           )}
 
-          <Button variant="outline" icon={Mail} onClick={() => alert("Innovation Helpdesk: innovation-support@enterprise.com")}>
+          <Button variant="outline" icon={Mail} onClick={() => toast("Innovation Helpdesk: innovation-support@enterprise.com", { icon: "ℹ️" })}>
             Contact Support
           </Button>
         </div>

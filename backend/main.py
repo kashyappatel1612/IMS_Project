@@ -464,10 +464,82 @@ def create_evaluator(req: schemas.EvaluatorCreateRequest, current_user: dict = D
             domain=req.domain.strip(),
             department=req.department.strip() if req.department else ""
         )
-        return {"message": "Domain Evaluator added successfully!", "evaluator": saved}
     except Exception as err:
         print("Create Evaluator Error:", err)
         raise HTTPException(status_code=500, detail="Failed to add domain evaluator.")
+
+# ==========================================
+# ROLE-BASED ASSIGNMENT & NOTIFICATION ENDPOINTS
+# ==========================================
+
+@app.get("/api/users/by-role")
+@app.get("/users/by-role")
+def get_users_by_role(role: Optional[str] = None):
+    try:
+        users = database.get_users_by_role_in_db(role or "")
+        return users
+    except Exception as err:
+        print("Get Users By Role Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch users by role.")
+
+@app.post("/api/assignments", status_code=status.HTTP_201_CREATED)
+@app.post("/assignments", status_code=status.HTTP_201_CREATED)
+def create_assignment(req: schemas.AssignmentCreateRequest, current_user: dict = Depends(get_current_user)):
+    user_role = current_user.get("role", "User")
+    if user_role not in ["Administrator", "Project Coordinator"]:
+        raise HTTPException(status_code=403, detail="Only Project Coordinator or Administrator can assign roles.")
+
+    try:
+        assignment = database.create_assignment_in_db(
+            idea_id=req.ideaId,
+            assigned_role=req.assignedRole,
+            assigned_user_id=req.assignedUserId,
+            assigned_by=current_user.get("id", 0),
+            remarks=req.remarks or "",
+            status=req.status or "Pending",
+            deadline=req.deadline or ""
+        )
+        return {"message": f"Successfully assigned {req.assignedRole}!", "assignment": assignment}
+    except Exception as err:
+        print("Create Assignment Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to create role assignment.")
+
+@app.get("/api/my-assignments")
+@app.get("/my-assignments")
+def get_my_assignments(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("id", 0)
+    user_role = current_user.get("role", "User")
+    user_email = current_user.get("email", "")
+
+    try:
+        ideas = database.get_my_assignments_in_db(user_id, user_role, user_email)
+        return ideas
+    except Exception as err:
+        print("Get My Assignments Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch assigned ideas.")
+
+@app.get("/api/ideas/{idea_id}/assignments")
+@app.get("/api/idea/{idea_id}/assignment")
+@app.get("/idea/{idea_id}/assignment")
+def get_idea_assignments_history(idea_id: int, current_user: dict = Depends(get_current_user)):
+    try:
+        history = database.get_assignment_history_in_db(idea_id)
+        return history
+    except Exception as err:
+        print("Get Assignment History Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch assignment history.")
+
+@app.get("/api/notifications")
+def get_user_notifications(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("id", 0)
+    user_email = current_user.get("email", "")
+    user_role = current_user.get("role", "User")
+
+    try:
+        return database.get_notifications_in_db(user_id, user_email, user_role)
+    except Exception as err:
+        print("Get Notifications Error:", err)
+        return {"notifications": [], "unreadCount": 0}
 
 if __name__ == "__main__":
     import uvicorn
