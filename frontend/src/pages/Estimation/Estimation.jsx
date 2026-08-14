@@ -175,7 +175,6 @@ function Estimation() {
               <Calculator size={14} /> Resource & Cost Modeling
             </span>
           </div>
-          <p>Estimate engineering labor costs, infrastructure licensing, sprint velocity, and ROI projections for BA-approved proposals.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -298,7 +297,7 @@ function Estimation() {
       </div>
 
       {/* Data Table */}
-      <Card title={`Estimation & Resource Allocation Table (${filteredIdeas.length})`} subtitle="View detailed labor, software licensing, and timeline estimates">
+      <Card title={`Estimation & Resource Allocation Table (${filteredIdeas.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

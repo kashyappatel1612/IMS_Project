@@ -84,3 +84,29 @@ class NotificationCreateRequest(BaseModel):
     message: str
     ideaId: Optional[int] = None
     type: Optional[str] = "allocation"
+
+# User Management Schemas
+class AdminUserCreateRBACRequest(BaseModel):
+    username: str
+    email: str
+    password: Optional[str] = None
+    role: Optional[str] = "User"
+    departmentId: Optional[int] = None
+    employeeId: Optional[str] = ""
+    status: Optional[str] = "Active"
+
+class AdminUserUpdateRBACRequest(BaseModel):
+    username: str
+    email: str
+    departmentId: Optional[int] = None
+    employeeId: Optional[str] = ""
+
+class AdminUserStatusRequest(BaseModel):
+    status: str
+
+class AdminUserRoleRequest(BaseModel):
+    role: str
+
+class AdminResetPasswordRequest(BaseModel):
+    newPassword: str
+

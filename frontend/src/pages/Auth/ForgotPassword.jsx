@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, ArrowLeft, CheckCircle2, AlertCircle, Send } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle, Send, KeyRound } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
-import imsLogo from "../../assets/ims-logo.jpg";
+import AuthStage from "../../components/AuthStage";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -34,7 +34,6 @@ function ForgotPassword() {
       const cleanEmail = email.trim().toLowerCase();
       let foundAccount = false;
 
-      // 1. Check idea360Users list
       try {
         const usersListStr = localStorage.getItem("idea360Users");
         if (usersListStr) {
@@ -47,7 +46,6 @@ function ForgotPassword() {
         console.error(err);
       }
 
-      // 2. Check idea360User single object
       try {
         const singleUserStr = localStorage.getItem("idea360User");
         if (singleUserStr) {
@@ -60,7 +58,6 @@ function ForgotPassword() {
         console.error(err);
       }
 
-      // 3. Check login history & standard enterprise domain emails (@imsgroup.com or valid email structure)
       try {
         const historyStr = localStorage.getItem("idea360LoginHistory");
         if (historyStr) {
@@ -73,7 +70,6 @@ function ForgotPassword() {
         console.error(err);
       }
 
-      // Allow any valid email format for demo reset
       if (cleanEmail.includes("@")) {
         foundAccount = true;
       }
@@ -90,75 +86,89 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        {/* Side-by-Side Logo & Heading (Bagal me) */}
-        <div className="auth-brand-header">
-          <img src={imsLogo} alt="IMS Group" className="auth-brand-logo" />
-          <div className="auth-brand-titles">
-            <h2>Reset Password</h2>
-            <p>Enter email for instructions</p>
+    <div className="emerald-auth-page">
+      <div className="emerald-auth-card">
+        
+        {/* SHARED AUTOMATED IMS GROUP ORBITING STAGE */}
+        <AuthStage isSubmitting={loading} />
+
+        {/* RIGHT PANEL — FORGOT PASSWORD FORM */}
+        <div className="emerald-right-panel">
+          
+          {/* Header Avatar Circle */}
+          <div className="emerald-avatar-wrapper">
+            <div className="emerald-avatar-circle">
+              <KeyRound size={28} color="#38bdf8" />
+            </div>
+            <h2 className="emerald-welcome-title">RESET PASSWORD</h2>
+            <p className="emerald-welcome-subtitle">IMS Group Account Recovery</p>
           </div>
+
+          {error && (
+            <div className="auth-alert error" style={{ marginBottom: "12px" }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success ? (
+            <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="auth-alert success">
+                <CheckCircle2 size={20} />
+                <span>
+                  Reset instructions sent! Check your inbox for <strong>{email}</strong>.
+                </span>
+              </div>
+
+              <p style={{ fontSize: "13px", color: "#64748b", textAlign: "center" }}>
+                Password reset link has been dispatched to your email address.
+              </p>
+
+              <Link to="/" style={{ width: "100%" }}>
+                <button type="button" className="emerald-login-btn">
+                  BACK TO SIGN IN
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleReset} className="emerald-login-form">
+              <div className="input-field-group">
+                <label className="input-label" style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>
+                  REGISTERED EMAIL ADDRESS
+                </label>
+                <div className="emerald-input-wrapper">
+                  <Mail size={16} className="emerald-input-icon" />
+                  <input
+                    type="email"
+                    className="emerald-line-input"
+                    placeholder="name@imsgroup.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="emerald-login-btn" disabled={loading} style={{ marginTop: "12px" }}>
+                {loading ? <span className="btn-spinner"></span> : "SEND RESET INSTRUCTIONS"}
+              </button>
+            </form>
+          )}
+
+          {!success && (
+            <div className="emerald-footer-links">
+              <Link to="/" className="emerald-reg-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <ArrowLeft size={15} />
+                <span>Back to Sign In</span>
+              </Link>
+            </div>
+          )}
+
         </div>
 
-        {error && (
-          <div className="auth-alert error">
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success ? (
-          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div className="auth-alert success">
-              <CheckCircle2 size={22} />
-              <span>
-                Reset instructions sent! Check your inbox for <strong>{email}</strong>.
-              </span>
-            </div>
-
-            <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>
-              We've simulated sending a password reset token. You can now return to sign in.
-            </p>
-
-            <Link to="/" style={{ width: "100%" }}>
-              <Button variant="primary" fullWidth icon={ArrowLeft}>
-                Back to Sign In
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleReset} className="auth-form">
-            <Input
-              label="Registered Email Address"
-              type="email"
-              placeholder="name@imsgroup.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              icon={Mail}
-              required
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              loading={loading}
-              icon={Send}
-            >
-              Send Reset Instructions
-            </Button>
-          </form>
-        )}
-        {!success && (
-          <div className="auth-footer">
-            <Link to="/" className="auth-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-              <ArrowLeft size={16} />
-              <span>Back to Login</span>
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
 }
+
 export default ForgotPassword;

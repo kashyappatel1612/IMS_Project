@@ -366,10 +366,10 @@ function PCDashboard({ userName = "Project Coordinator" }) {
   return (
     <div className="dashboard-wrapper">
       {/* Clean Header Banner */}
-      <div className="dashboard-header-flex" style={{ marginBottom: "20px" }}>
+      <div className="dashboard-header-flex" style={{ marginBottom: "8px" }}>
         <div className="dash-title-box">
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+            <h1 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: 0 }}>
               Project Coordinator End-to-End Idea Command Center
             </h1>
             <span className="mode-badge-green" style={{ background: "#e0e7ff", color: "#4338ca" }}>
@@ -546,10 +546,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
 
       {/* SECTION 1: MASTER IDEAS LIFECYCLE TABLE */}
       {activeTab !== "evaluators" ? (
-        <Card
-          title={`Proposals End-to-End Pipeline Queue (${filteredIdeas.length})`}
-          subtitle="Real-time stage tracking, assigned stakeholders, progress percentage, and audit journey"
-        >
+        <Card title={`All Enterprise Proposals Pipeline (${ideas.length})`}>
           <div className="data-table-wrapper">
             <table className="enterprise-table">
               <thead>
@@ -658,10 +655,7 @@ function PCDashboard({ userName = "Project Coordinator" }) {
         </Card>
       ) : (
         /* SECTION 2: DOMAIN EXPERTS DIRECTORY TAB */
-        <Card
-          title={`Domain Experts Directory (${filteredEvaluators.length})`}
-          subtitle="Reviewers, Business Analysts, and Project Managers mapped to specific Industry Domains"
-        >
+        <Card title="Expert Domain Mapping Directory">
           <div style={{ marginBottom: "14px", display: "flex", gap: "10px", alignItems: "center" }}>
             <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b" }}>Domain Filter:</span>
             <select

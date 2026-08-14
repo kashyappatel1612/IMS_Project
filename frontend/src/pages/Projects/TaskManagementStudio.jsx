@@ -60,7 +60,6 @@ function TaskManagementStudio() {
               <CheckSquare size={14} /> Task Allocation
             </span>
           </div>
-          <p>Assign sprint tasks, set completion deadlines, and monitor development backlog status.</p>
         </div>
 
         <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
@@ -68,7 +67,7 @@ function TaskManagementStudio() {
         </Button>
       </div>
 
-      <Card title={`Sprint Tasks Backlog (${tasks.length})`} subtitle="Development tasks assigned to engineering team leads">
+      <Card title={`Sprint Tasks Backlog (${tasks.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

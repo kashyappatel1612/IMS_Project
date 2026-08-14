@@ -100,7 +100,6 @@ function QualityAssurance() {
               <ShieldCheck size={14} /> Stage 6 Quality Gate
             </span>
           </div>
-          <p>Execute automated unit test suites, security compliance audits, defect resolution tracking, and final production release sign-offs.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -213,7 +212,7 @@ function QualityAssurance() {
       </div>
 
       {/* Main QA Testing Table */}
-      <Card title={`Quality Assurance Gate & Compliance Audit Matrix (${filteredList.length})`} subtitle="Unit tests, UAT sign-off, and security clearance tracking">
+      <Card title={`Quality Assurance Gate & Compliance Audit Matrix (${filteredList.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

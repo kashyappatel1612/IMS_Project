@@ -150,9 +150,6 @@ function ReviewerDashboard({ userName = "Reviewer" }) {
               <ShieldCheck size={14} /> Domain Reviewer Portal ({userName})
             </span>
           </div>
-          <p>
-            Dedicated review workflow. Perform Stage 1 Initial Screening and Feasibility evaluations on assigned innovation proposals.
-          </p>
         </div>
 
         <div style={{ position: "relative", width: "280px" }}>
@@ -238,7 +235,6 @@ function ReviewerDashboard({ userName = "Reviewer" }) {
       {/* ASSIGNED IDEAS DATA TABLE */}
       <Card
         title={`My Assigned Innovation Ideas (${displayedIdeas.length})`}
-        subtitle="Review assigned ideas, evaluate rubric criteria, and submit decision sign-offs"
       >
         {/* Quick Filter Bar */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center" }}>

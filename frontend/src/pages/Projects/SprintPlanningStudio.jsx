@@ -61,7 +61,6 @@ function SprintPlanningStudio() {
               <Calendar size={14} /> Sprint Management
             </span>
           </div>
-          <p>Plan 2-week agile sprints, track velocity, assign story points, and schedule delivery milestones.</p>
         </div>
 
         <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
@@ -69,7 +68,7 @@ function SprintPlanningStudio() {
         </Button>
       </div>
 
-      <Card title={`Active & Planned Agile Sprints (${sprints.length})`} subtitle="Monitor sprint progress, capacity velocity, and target end dates">
+      <Card title={`Active & Planned Agile Sprints (${sprints.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

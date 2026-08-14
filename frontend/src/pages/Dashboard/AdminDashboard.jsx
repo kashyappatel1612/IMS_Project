@@ -79,7 +79,6 @@ function AdminDashboard({ userName }) {
           <div className="title-flex-row">
             <h1>Executive Admin Panel</h1>
           </div>
-          <p>Click on any KPI card below to instantly filter submissions. Evaluate ideas with strict Approve or Reject mutual exclusion.</p>
         </div>
       </div>
 
@@ -210,7 +209,6 @@ function AdminDashboard({ userName }) {
       <div ref={tableRef}>
         <Card
           title={`Idea Submissions List (${filterMode.toUpperCase()})`}
-          subtitle="Review submitted ideas and perform Approve or Reject actions with status verification"
         >
           <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
             <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-muted)" }}>Active Filter:</span>
@@ -325,7 +323,7 @@ function AdminDashboard({ userName }) {
 
       {/* Row 2: Visual Charts & Analytics */}
       <div className="dash-row-2col">
-        <Card title="Company Ideas Overview" subtitle="Submitted vs Approved ideas over time">
+        <Card title="Company Ideas Overview">
           <div className="line-chart-box">
             <svg viewBox="0 0 500 200" className="line-chart-svg">
               <defs>

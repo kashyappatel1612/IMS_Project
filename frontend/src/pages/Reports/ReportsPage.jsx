@@ -88,7 +88,6 @@ function ReportsPage() {
               <FileBarChart size={14} /> Executive Reporting Studio
             </span>
           </div>
-          <p>Comprehensive pipeline metrics, domain distribution, stage funnel SLA compliance, and exportable audit logs.</p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
@@ -103,18 +102,18 @@ function ReportsPage() {
 
       {/* KPI STAT CARDS */}
       <div className="kpi-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
+        <div style={{ background: "var(--card-bg, #ffffff)", border: "1px solid var(--border-color, #e2e8f0)", borderRadius: "12px", padding: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-            <span style={{ fontSize: "11px", fontWeight: "800", color: "#64748b", textTransform: "uppercase" }}>Total Submissions</span>
+            <span style={{ fontSize: "11px", fontWeight: "800", color: "var(--text-muted, #64748b)", textTransform: "uppercase" }}>Total Submissions</span>
             <div style={{ background: "#e0e7ff", color: "#4f46e5", padding: "6px", borderRadius: "50%" }}>
               <FileBarChart size={16} />
             </div>
           </div>
-          <div style={{ fontSize: "24px", fontWeight: "900", color: "#1e293b" }}>{totalSubmitted}</div>
-          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>Across all business domains</div>
+          <div style={{ fontSize: "24px", fontWeight: "900", color: "var(--text-dark, #1e293b)" }}>{totalSubmitted}</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", marginTop: "4px" }}>Across all business domains</div>
         </div>
 
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
+        <div style={{ background: "var(--card-bg, #ffffff)", border: "1px solid var(--border-color, #e2e8f0)", borderRadius: "12px", padding: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", fontWeight: "800", color: "#166534", textTransform: "uppercase" }}>Passed Initial Screening</span>
             <div style={{ background: "#dcfce7", color: "#16a34a", padding: "6px", borderRadius: "50%" }}>
@@ -122,10 +121,10 @@ function ReportsPage() {
             </div>
           </div>
           <div style={{ fontSize: "24px", fontWeight: "900", color: "#15803d" }}>{passedScreening}</div>
-          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>Qualified for Feasibility Review</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", marginTop: "4px" }}>Qualified for Feasibility Review</div>
         </div>
 
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
+        <div style={{ background: "var(--card-bg, #ffffff)", border: "1px solid var(--border-color, #e2e8f0)", borderRadius: "12px", padding: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", fontWeight: "800", color: "#1e40af", textTransform: "uppercase" }}>In Parallel Review</span>
             <div style={{ background: "#dbeafe", color: "#2563eb", padding: "6px", borderRadius: "50%" }}>
@@ -133,10 +132,10 @@ function ReportsPage() {
             </div>
           </div>
           <div style={{ fontSize: "24px", fontWeight: "900", color: "#1d4ed8" }}>{inFeasibility}</div>
-          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>Active in Business/Tech/Func</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted, #64748b)", marginTop: "4px" }}>Active in Business/Tech/Func</div>
         </div>
 
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
+        <div style={{ background: "var(--card-bg, #ffffff)", border: "1px solid var(--border-color, #e2e8f0)", borderRadius: "12px", padding: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", fontWeight: "800", color: "#991b1b", textTransform: "uppercase" }}>Non-Feasible / Rejected</span>
             <div style={{ background: "#fee2e2", color: "#dc2626", padding: "6px", borderRadius: "50%" }}>
@@ -149,7 +148,7 @@ function ReportsPage() {
       </div>
 
       {/* FILTER & TABLE */}
-      <Card title={`Detailed Audit & Pipeline Reports (${filteredIdeas.length})`} subtitle="Filter and inspect detailed status across all stage gates">
+      <Card title={`Detailed Audit & Pipeline Reports (${filteredIdeas.length})`}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", gap: "16px" }}>
           <div style={{ position: "relative", width: "300px" }}>
             <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />

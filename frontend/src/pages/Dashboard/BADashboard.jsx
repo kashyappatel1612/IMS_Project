@@ -243,9 +243,6 @@ function BADashboard({ userName = "Business Analyst" }) {
               <Briefcase size={14} /> Requirements Engineering Studio ({userName})
             </span>
           </div>
-          <p>
-            Create and manage BRDs, FRDs, user stories, business rules, and financial ROI projections for approved proposals.
-          </p>
         </div>
 
         <div className="quick-actions-flex" style={{ display: "flex", gap: "10px" }}>
@@ -336,7 +333,6 @@ function BADashboard({ userName = "Business Analyst" }) {
       {/* TABLE OF ASSIGNED IDEAS FOR BUSINESS ANALYST */}
       <Card
         title={`Assigned Innovation Ideas for Business Analysis (${displayedQueue.length})`}
-        subtitle="Manage BRDs, FRDs, user stories, acceptance criteria, and cost/ROI models for approved proposals"
       >
         <div className="data-table-wrapper">
           <table className="enterprise-table">

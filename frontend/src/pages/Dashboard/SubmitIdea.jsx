@@ -202,7 +202,6 @@ function SubmitIdea() {
             </span>
           </div>
           <h1>Submit Your Innovation Proposal</h1>
-          <p>Provide details of your innovative concept and attach supporting documentation.</p>
         </div>
 
         {/* Submitter Info & Guidelines Banner Bar */}
@@ -233,7 +232,7 @@ function SubmitIdea() {
       {/* CLEAN CENTERED SINGLE-COLUMN FORM */}
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
         {/* Card 1: Title & Category */}
-        <Card title="1. Idea Identification & Domain" subtitle="Basic details for categorization and routing to domain reviewers">
+        <Card title="1. Idea Identification & Domain">
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <Input
               label="Proposal Title *"
@@ -293,7 +292,7 @@ function SubmitIdea() {
         </Card>
 
         {/* Card 2: Problem & Solution */}
-        <Card title="2. Problem Statement" subtitle="Describe the problem statement and how your proposed innovation resolves it">
+        <Card title="2. Problem Statement">
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div className="input-field-group">
               <label className="input-label"> Problem Statement *</label>
@@ -333,7 +332,7 @@ function SubmitIdea() {
         </Card>
 
         {/* Card 3: Supporting Document Attachment */}
-        <Card title="3. Attachments" subtitle="Upload architecture diagrams, wireframes, or business presentations (Max 10MB)">
+        <Card title="3. Attachments">
           <div className="input-field-group">
             <input
               type="file"

@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Lightbulb,
   Filter,
-  FileCheck,
   BarChart,
   Calculator,
   FolderKanban,
@@ -15,23 +13,15 @@ import {
   FileBarChart,
   Settings,
   ShieldCheck,
-  History,
-  Bell,
-  FileText,
-  ListTodo,
-  Folder,
-  Calendar,
-  CheckSquare,
-  Rocket,
-  UserCheck,
   Users,
-  LogOut
+  UserCheck,
+  History,
+  FileText
 } from "lucide-react";
 import imsLogo from "../assets/ims-logo.jpg";
 
 function Sidebar({ isOpen }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const [userRole, setUserRole] = useState("User");
 
   useEffect(() => {
@@ -48,140 +38,193 @@ function Sidebar({ isOpen }) {
     }
   }, [location]);
 
-  // Full Admin Navigation Items List
-  const adminNavItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
-    { id: "estimation", label: "Estimation", icon: Calculator, path: "/estimation" },
-    { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
-    { id: "execution", label: "Execution", icon: PlayCircle, path: "/execution" },
-    { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
-    { id: "quality-assurance", label: "Quality Assurance", icon: ShieldCheck, path: "/quality-assurance" },
-    { id: "benefits-tracking", label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
-    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
-    { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
-  ];
-
-  // Dedicated Project Coordinator Navigation Menu Items
-  const pcNavItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "allocate-roles", label: "Allocate Roles", icon: UserCheck, path: "/reviewer-allocation" },
-    { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { id: "business-analysis", label: "Business Analysis", icon: BarChart, path: "/business-analysis" },
-    { id: "estimation", label: "Estimation", icon: Calculator, path: "/estimation" },
-    { id: "project-creation", label: "Project Creation", icon: FolderKanban, path: "/projects" },
-    { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
-    { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
-    { id: "user-management", label: "User Management", icon: Users, path: "/user-management" },
-    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
-  ];
-
-  // Dedicated Reviewer Navigation Menu Items
-  const reviewerNavItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "initial-screening", label: "Initial Screening", icon: Filter, path: "/initial-screening" },
-    { id: "feasibility-review", label: "Feasibility Review", icon: ShieldCheck, path: "/feasibility-review" },
-    { id: "review-history", label: "Review History", icon: History, path: "/review-history" },
-    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
-    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
-  ];
-
-  // Dedicated Business Analyst Navigation Menu Items
-  const baNavItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "brd-frd", label: "BRD / FRD Studio", icon: FileText, path: "/brd-frd" },
-    { id: "documents", label: "Documents", icon: Folder, path: "/documents" },
-    { id: "analysis-reports", label: "Analysis Reports", icon: FileBarChart, path: "/analysis-reports" },
-    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
-    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
-  ];
-
-  // Dedicated Project Manager Navigation Menu Items
-  const pmNavItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "my-projects", label: "My Projects", icon: FolderKanban, path: "/projects" },
-    { id: "sprint-planning", label: "Sprint Planning", icon: Calendar, path: "/sprint-planning" },
-    { id: "task-management", label: "Task Management", icon: CheckSquare, path: "/task-management" },
-    { id: "execution", label: "Execution", icon: PlayCircle, path: "/execution" },
-    { id: "progress-tracking", label: "Progress Tracking", icon: TrendingUp, path: "/progress-tracking" },
-    { id: "quality-assurance", label: "Quality Assurance", icon: ShieldCheck, path: "/quality-assurance" },
-    { id: "release-management", label: "Release Management", icon: Rocket, path: "/release-management" },
-    { id: "benefits-tracking", label: "Benefits Tracking", icon: Award, path: "/benefits-tracking" },
-    { id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
-    { id: "reports", label: "Reports", icon: FileBarChart, path: "/reports" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
-  ];
-
-  // User Navigation Items
-  const userNavItems = [
-    { id: "dashboard", label: "Dashboard (My Ideas)", icon: LayoutDashboard, path: "/dashboard" },
-    { id: "knowledge-base", label: "Knowledge Base", icon: BookOpen, path: "/knowledge-base" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
-  ];
-
-  // Role-Specific Navigation Menu Logic
-  const getMenuForRole = () => {
-    if (userRole === "Administrator") {
-      return adminNavItems;
-    }
-
-    if (userRole === "Project Coordinator") {
-      return pcNavItems;
-    }
-
-    if (userRole === "Reviewer") {
-      return reviewerNavItems;
-    }
-
-    if (userRole === "Business Analyst") {
-      return baNavItems;
-    }
-
-    if (userRole === "Project Manager") {
-      return pmNavItems;
-    }
-
-    // Default 'User' Role
-    return userNavItems;
-  };
-
-  const currentNavItems = getMenuForRole();
+  const isAdmin = userRole === "Administrator" || userRole === "Admin";
+  const isPC = userRole === "Project Coordinator";
 
   return (
     <aside className={`app-sidebar ${isOpen ? "open" : ""}`}>
       <div className="sidebar-top">
+        {/* Brand Header */}
         <div className="sidebar-brand">
           <img src={imsLogo} alt="IMS Group" className="sidebar-brand-logo" />
           <div className="brand-text-col">
             <span className="brand-text">Idea360</span>
-            <span className="brand-subtext">
-              {userRole} Portal
-            </span>
           </div>
         </div>
 
+        {/* Navigation List */}
         <ul className="sidebar-menu-list">
-          {currentNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+          {/* Main Dashboard */}
+          <li>
+            <Link
+              to="/dashboard"
+              className={`sidebar-link-item ${location.pathname === "/dashboard" ? "active" : ""}`}
+            >
+              <LayoutDashboard size={18} className="sidebar-link-icon" />
+              <span>Dashboard</span>
+            </Link>
+          </li>
 
-            return (
-              <li key={item.label}>
+          {/* Administration Section */}
+          {isAdmin && (
+            <>
+              <li className="sidebar-section-header">Administration</li>
+              <li>
                 <Link
-                  to={item.path}
-                  className={`sidebar-link-item ${isActive ? "active" : ""}`}
+                  to="/user-management"
+                  className={`sidebar-link-item ${location.pathname === "/user-management" ? "active" : ""}`}
                 >
-                  <Icon size={17} className="sidebar-link-icon" />
-                  <span>{item.label}</span>
+                  <Users size={18} className="sidebar-link-icon" />
+                  <span>User Management</span>
                 </Link>
               </li>
-            );
-          })}
+            </>
+          )}
+
+          {/* Workflow Section */}
+          <li className="sidebar-section-header">Workflow</li>
+
+          {isPC && (
+            <li>
+              <Link
+                to="/reviewer-allocation"
+                className={`sidebar-link-item ${location.pathname === "/reviewer-allocation" ? "active" : ""}`}
+              >
+                <UserCheck size={18} className="sidebar-link-icon" />
+                <span>Allocate Roles</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || isPC || userRole === "Reviewer") && (
+            <li>
+              <Link
+                to="/initial-screening"
+                className={`sidebar-link-item ${location.pathname === "/initial-screening" ? "active" : ""}`}
+              >
+                <Filter size={18} className="sidebar-link-icon" />
+                <span>Initial Screening</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || isPC || userRole === "Business Analyst") && (
+            <li>
+              <Link
+                to="/business-analysis"
+                className={`sidebar-link-item ${location.pathname === "/business-analysis" ? "active" : ""}`}
+              >
+                <BarChart size={18} className="sidebar-link-icon" />
+                <span>Business Analysis</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || isPC) && (
+            <li>
+              <Link
+                to="/estimation"
+                className={`sidebar-link-item ${location.pathname === "/estimation" ? "active" : ""}`}
+              >
+                <Calculator size={18} className="sidebar-link-icon" />
+                <span>Estimation</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || isPC || userRole === "Project Manager") && (
+            <li>
+              <Link
+                to="/projects"
+                className={`sidebar-link-item ${location.pathname === "/projects" ? "active" : ""}`}
+              >
+                <FolderKanban size={18} className="sidebar-link-icon" />
+                <span>Projects</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || userRole === "Project Manager") && (
+            <li>
+              <Link
+                to="/execution"
+                className={`sidebar-link-item ${location.pathname === "/execution" ? "active" : ""}`}
+              >
+                <PlayCircle size={18} className="sidebar-link-icon" />
+                <span>Execution</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || isPC || userRole === "Project Manager") && (
+            <li>
+              <Link
+                to="/progress-tracking"
+                className={`sidebar-link-item ${location.pathname === "/progress-tracking" ? "active" : ""}`}
+              >
+                <TrendingUp size={18} className="sidebar-link-icon" />
+                <span>Progress Tracking</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || userRole === "Project Manager" || userRole === "QA") && (
+            <li>
+              <Link
+                to="/quality-assurance"
+                className={`sidebar-link-item ${location.pathname === "/quality-assurance" ? "active" : ""}`}
+              >
+                <ShieldCheck size={18} className="sidebar-link-icon" />
+                <span>Quality Assurance</span>
+              </Link>
+            </li>
+          )}
+
+          {(isAdmin || userRole === "Project Manager" || userRole === "Business Analyst") && (
+            <li>
+              <Link
+                to="/benefits-tracking"
+                className={`sidebar-link-item ${location.pathname === "/benefits-tracking" ? "active" : ""}`}
+              >
+                <Award size={18} className="sidebar-link-icon" />
+                <span>Benefits Tracking</span>
+              </Link>
+            </li>
+          )}
+
+          <li>
+            <Link
+              to="/knowledge-base"
+              className={`sidebar-link-item ${location.pathname === "/knowledge-base" ? "active" : ""}`}
+            >
+              <BookOpen size={18} className="sidebar-link-icon" />
+              <span>Knowledge Base</span>
+            </Link>
+          </li>
+
+          {/* Reports */}
+          {(isAdmin || isPC || userRole === "Project Manager") && (
+            <li>
+              <Link
+                to="/reports"
+                className={`sidebar-link-item ${location.pathname === "/reports" ? "active" : ""}`}
+              >
+                <FileBarChart size={18} className="sidebar-link-icon" />
+                <span>Reports</span>
+              </Link>
+            </li>
+          )}
+
+          {/* Settings */}
+          <li>
+            <Link
+              to="/settings"
+              className={`sidebar-link-item ${location.pathname === "/settings" ? "active" : ""}`}
+            >
+              <Settings size={18} className="sidebar-link-icon" />
+              <span>Settings</span>
+            </Link>
+          </li>
         </ul>
       </div>
     </aside>

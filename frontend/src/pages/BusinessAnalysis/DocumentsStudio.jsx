@@ -39,7 +39,6 @@ function DocumentsStudio() {
               <Folder size={14} /> Document Management
             </span>
           </div>
-          <p>Centralized repository of attached BRD, FRD, and business feasibility documents.</p>
         </div>
 
         <div style={{ position: "relative", width: "280px" }}>
@@ -55,7 +54,7 @@ function DocumentsStudio() {
         </div>
       </div>
 
-      <Card title={`Requirements Documents & Attachments (${displayedDocs.length})`} subtitle="Download and inspect attached PDF specs and Excel models">
+      <Card title={`Requirements Documents & Attachments (${displayedDocs.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

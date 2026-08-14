@@ -99,7 +99,6 @@ function BenefitsTracking() {
               <TrendingUp size={14} /> Stage 7 Post-Launch Value
             </span>
           </div>
-          <p>Track actual financial savings, operational productivity gains, employee hours saved, and author innovation rewards.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -202,7 +201,7 @@ function BenefitsTracking() {
       </div>
 
       {/* Benefits Table */}
-      <Card title={`Post-Launch Benefits & Value Realization (${filteredList.length})`} subtitle="Measure post-implementation cost savings and author spot bonus rewards">
+      <Card title={`Post-Launch Benefits & Value Realization (${filteredList.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

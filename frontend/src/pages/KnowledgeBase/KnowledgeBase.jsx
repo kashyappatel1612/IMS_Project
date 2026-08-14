@@ -397,9 +397,6 @@ function KnowledgeBase() {
               <BookOpen size={14} /> Resource Library
             </span>
           </div>
-          <p>
-            Access proposal templates, evaluation criteria, ROI calculation guides, and enterprise innovation guidelines.
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
@@ -653,7 +650,7 @@ function KnowledgeBase() {
       </div>
 
       {/* Downloadable Proposal & Financial Templates */}
-      <Card style={{ marginBottom: "32px" }} title="Downloadable Templates & Tools" subtitle="Official forms, Excel models, and presentation decks">
+      <Card style={{ marginBottom: "32px" }} title="Downloadable Templates & Tools">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px", marginTop: "12px" }}>
           {DOWNLOADABLE_TEMPLATES.map((tmpl) => {
             const IconComp = tmpl.icon;
@@ -706,7 +703,7 @@ function KnowledgeBase() {
       </Card>
 
       {/* Frequently Asked Questions (FAQ Accordion) */}
-      <Card style={{ marginBottom: "32px" }} title="Frequently Asked Questions (FAQs)" subtitle="Common inquiries about proposal screening and review procedures">
+      <Card style={{ marginBottom: "32px" }} title="Frequently Asked Questions (FAQs)">
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
           {FAQS.map((faq) => {
             const isExpanded = expandedFaq === faq.id;

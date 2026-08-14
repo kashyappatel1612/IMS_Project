@@ -239,7 +239,6 @@ function ProjectList() {
               <FolderKanban size={14} /> PM Enterprise Control Center ({pmName})
             </span>
           </div>
-          <p>Onboard BA approved proposals, assign project milestones, track real-time execution progress, and manage resources.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -384,10 +383,7 @@ function ProjectList() {
       </div>
 
       {/* Main PM Projects Table */}
-      <Card
-        title={`Project Portfolio & Execution Roadmap (${filterTab.toUpperCase()})`}
-        subtitle="Manage end-to-end innovation project lifecycle, BA reports, timelines, and execution status"
-      >
+      <Card title={`Project Manager Active Portfolio (${filteredProjects.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

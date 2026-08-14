@@ -102,7 +102,6 @@ function ProgressTracking() {
               <TrendingUp size={14} /> Sprint & Milestone Velocity
             </span>
           </div>
-          <p>Monitor real-time sprint execution progress, story point burn-down, milestone velocity, and project health indicators.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -225,7 +224,7 @@ function ProgressTracking() {
       </div>
 
       {/* Progress Matrix Table */}
-      <Card title={`Project Sprint Velocity & Milestone Progress (${filteredList.length})`} subtitle="Real-time completion % synced with execution milestones">
+      <Card title={`Project Sprint Velocity & Milestone Progress (${filteredList.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

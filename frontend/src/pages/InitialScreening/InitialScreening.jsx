@@ -90,11 +90,6 @@ function InitialScreening() {
               {isReviewer ? "Reviewer Evaluator Workspace" : `Read-Only Status View (${userRole})`}
             </span>
           </div>
-          <p>
-            {isReviewer
-              ? "Reviewer Workspace: Validate proposal criteria, check SLA deadlines, and submit screening decision sign-off."
-              : "Read-Only Overview: View current screening status and audit history. Screening evaluation buttons are reserved exclusively for Reviewers."}
-          </p>
         </div>
 
         <div style={{ position: "relative", width: "280px" }}>
@@ -184,14 +179,7 @@ function InitialScreening() {
       </div>
 
       {/* Screening Queue Table */}
-      <Card
-        title={`Initial Screening Queue (${filterMode.toUpperCase()})`}
-        subtitle={
-          isReviewer
-            ? "Reviewer Mode: Perform criteria evaluations and submit screening decisions."
-            : `Read-Only Mode (${userRole}): View current screening evaluation status and details.`
-        }
-      >
+      <Card title={`Initial Screening Pipeline Queue (${displayedIdeas.length})`}>
         {/* Quick Filter Bar */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-muted)" }}>Active Filter:</span>

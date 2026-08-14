@@ -26,12 +26,15 @@ import {
   LayoutDashboard,
   Filter,
   UserCheck,
-  Bell
+  Bell,
+  Sun,
+  Moon
 } from "lucide-react";
 import imsLogo from "../assets/ims-logo.jpg";
 import { getLoginHistory, switchAccount } from "../utils/authHistory";
 import { getSubmittedIdeas } from "../utils/ideaStorage";
 import { getUnreadCount } from "../utils/notificationStorage";
+import { useTheme } from "../context/ThemeContext";
 
 const NAV_PAGES = [
   { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -61,6 +64,7 @@ const KNOWLEDGE_ARTICLES = [
 function Navbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState({ username: "Ayushman", role: "Administrator", email: "" });
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginHistory, setLoginHistory] = useState([]);
@@ -341,7 +345,28 @@ function Navbar({ onToggleSidebar }) {
         )}
       </div>
 
-      <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {/* Global Dark / Light Mode Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="theme-toggle-btn"
+          style={{
+            cursor: "pointer",
+            padding: "8px",
+            borderRadius: "50%",
+            background: "var(--border-light, #f1f5f9)",
+            border: "1px solid var(--border-color, #e2e8f0)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "all 0.2s ease",
+            color: theme === "dark" ? "#f59e0b" : "#6366f1"
+          }}
+          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         {/* Real-time Notifications Bell Badge Button */}
         <div
           onClick={() => navigate("/notifications")}
@@ -350,7 +375,7 @@ function Navbar({ onToggleSidebar }) {
             cursor: "pointer",
             padding: "8px",
             borderRadius: "50%",
-            background: "#f1f5f9",
+            background: "var(--border-light, #f1f5f9)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -358,7 +383,7 @@ function Navbar({ onToggleSidebar }) {
           }}
           title="Notification Center"
         >
-          <Bell size={18} color="#475569" />
+          <Bell size={18} color="var(--text-muted, #475569)" />
           {getUnreadCount(user.role, user.email) > 0 && (
             <span
               style={{

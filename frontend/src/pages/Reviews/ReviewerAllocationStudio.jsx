@@ -196,7 +196,6 @@ function ReviewerAllocationStudio() {
               <UserCheck size={14} /> Stage 2: Expert Allocation
             </span>
           </div>
-          <p>Assign Business, Functional, and Technical Reviewers, Business Analysts, and Project Managers to proposals.</p>
         </div>
 
         <div style={{ position: "relative", width: "280px" }}>
@@ -233,7 +232,7 @@ function ReviewerAllocationStudio() {
         </div>
       )}
 
-      <Card title={`Proposals & Allocated Roles (${displayedIdeas.length})`} subtitle="Select proposal to allocate or reassign domain experts">
+      <Card title={`Proposals & Allocated Roles (${displayedIdeas.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

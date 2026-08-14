@@ -62,7 +62,6 @@ function ReviewHistory() {
               <History size={14} /> Completed & Processed Reviews Audit
             </span>
           </div>
-          <p>Historical audit trail of all completed screening and feasibility evaluations submitted by the Reviewer.</p>
         </div>
 
         <div style={{ position: "relative", width: "280px" }}>
@@ -78,7 +77,7 @@ function ReviewHistory() {
         </div>
       </div>
 
-      <Card title={`Review History Logs (${displayedHistory.length})`} subtitle="Full record of evaluation decisions, rubric scores, and recommendations">
+      <Card title={`Review History Logs (${displayedHistory.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

@@ -250,3 +250,103 @@ export async function postEvaluator(evaluatorData) {
     return null;
   }
 }
+
+// User Management API Calls
+export async function fetchAdminUsers(params = {}) {
+  try {
+    const res = await apiClient.get("/admin/users", { params });
+    return res.data;
+  } catch (err) {
+    console.warn("Failed to fetch admin users from backend:", err.message);
+    throw err;
+  }
+}
+
+export async function createAdminUserRBAC(userData) {
+  try {
+    const res = await apiClient.post("/admin/users", userData);
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to create new user account.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function updateAdminUserRBAC(userId, userData) {
+  try {
+    const res = await apiClient.put(`/admin/users/${userId}`, userData);
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to update user details.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function updateAdminUserStatusRBAC(userId, status) {
+  try {
+    const res = await apiClient.patch(`/admin/users/${userId}/status`, { status });
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to update account status.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function updateAdminUserRoleRBAC(userId, role) {
+  try {
+    const res = await apiClient.patch(`/admin/users/${userId}/role`, { role });
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to update user role.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function resetAdminUserPasswordRBAC(userId, newPassword) {
+  try {
+    const res = await apiClient.post(`/admin/users/${userId}/reset-password`, { newPassword });
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to reset user password.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function deleteAdminUserRBAC(userId) {
+  try {
+    const res = await apiClient.delete(`/admin/users/${userId}`);
+    return res.data;
+  } catch (err) {
+    const errorMsg =
+      err.response?.data?.detail ||
+      err.response?.data?.error ||
+      "Failed to delete user account.";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function fetchAdminDepartments() {
+  try {
+    const res = await apiClient.get("/admin/departments");
+    return res.data;
+  } catch (err) {
+    console.warn("Failed to fetch departments:", err.message);
+    return [];
+  }
+}
+

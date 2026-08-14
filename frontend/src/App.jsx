@@ -1,10 +1,11 @@
 import AppRoutes from "./routes/AppRoutes";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "./context/ThemeContext";
 import "./App.css";
 
 function App() {
   return (
-    <>
+    <ThemeProvider>
       <AppRoutes />
       <Toaster
         position="bottom-right"
@@ -34,7 +35,7 @@ function App() {
           },
         }}
       />
-    </>
+    </ThemeProvider>
   );
 }
 

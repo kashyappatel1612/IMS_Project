@@ -354,7 +354,7 @@ function ScreeningEvaluation() {
           </Card>
 
           {/* Card 2: Problem Statement */}
-          <Card title="2. Problem Statement" subtitle="Quantified operational pain point and baseline impact">
+          <Card title="2. Problem Statement">
             <div style={{ padding: "6px 0" }}>
               <div className="screening-text-box" style={{ fontSize: "14px", lineHeight: "1.6", color: "#334155" }}>
                 {idea.problemStatement || "No detailed problem statement recorded."}
@@ -363,7 +363,7 @@ function ScreeningEvaluation() {
           </Card>
 
           {/* Card 3: Proposed Solution */}
-          <Card title="3. Proposed Solution & Architecture" subtitle="Proposed technical innovation and workflow transformation">
+          <Card title="3. Proposed Solution & Architecture">
             <div style={{ padding: "6px 0" }}>
               <div className="screening-text-box" style={{ fontSize: "14px", lineHeight: "1.6", color: "#334155" }}>
                 {idea.description || idea.proposedSolution || "No detailed solution description recorded."}
@@ -372,7 +372,7 @@ function ScreeningEvaluation() {
           </Card>
 
           {/* Card 4: Expected Benefits & Business ROI */}
-          <Card title="4. Expected Benefits & Financial ROI" subtitle="Projected efficiency gains, time savings, and cost reductions">
+          <Card title="4. Expected Benefits & Financial ROI">
             <div style={{ padding: "6px 0" }}>
               <div className="screening-text-box" style={{ fontSize: "14px", lineHeight: "1.6", color: "#166534", background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
                 {idea.expectedBenefits || idea.expectedOutcome || "30% Operational time savings & enhanced workflow efficiency."}
@@ -381,7 +381,7 @@ function ScreeningEvaluation() {
           </Card>
 
           {/* Card 5: Supporting Attachments */}
-          <Card title="5. Supporting Attachments & Documents" subtitle="Uploaded proposal specifications, diagrams, or PDFs">
+          <Card title="5. Supporting Attachments & Documents">
             {idea.attachment ? (
               <div className="attachment-view-card">
                 <div className="attachment-view-left">
@@ -431,7 +431,7 @@ function ScreeningEvaluation() {
           </Card>
 
           {/* Card 6: Internal Discussion & Comments */}
-          <Card title="Internal Discussion & Reviewer Feed" subtitle="Private communication thread between Project Coordinator and Reviewer">
+          <Card title="Internal Discussion & Reviewer Feed">
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {commentsList.map((c) => (
@@ -475,7 +475,7 @@ function ScreeningEvaluation() {
           </div>
 
           {/* Screening Validation Checklist */}
-          <Card title="Screening Validation Checklist" subtitle="Validate proposal against 5 core criteria">
+          <Card title="Screening Validation Checklist">
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "6px 0" }}>
               
               {/* Checklist 1: Duplicate Check */}

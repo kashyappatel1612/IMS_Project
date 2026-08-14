@@ -37,13 +37,11 @@ function SubmittedAnalysisReports() {
               <Briefcase size={14} /> Stage 3 Reports Tracker
             </span>
           </div>
-          <p>Track all BRD/FRD analysis reports dispatched to Project Managers and their current review status.</p>
         </div>
       </div>
 
       <Card
         title={`Submitted Analysis Reports (${reports.length})`}
-        subtitle="Track reports dispatched to Project Manager & current approval status"
       >
         <div className="data-table-wrapper">
           <table className="enterprise-table">

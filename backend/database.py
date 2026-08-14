@@ -61,18 +61,34 @@ def init_tables():
             role VARCHAR(50) NOT NULL DEFAULT 'User',
             employee_id VARCHAR(100),
             is_verified BOOLEAN DEFAULT FALSE,
+            department_id INTEGER,
+            status VARCHAR(50) DEFAULT 'Active',
+            last_login TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_id VARCHAR(100);")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id INTEGER;")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active';")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
     except Exception:
         pass
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS departments (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) UNIQUE NOT NULL
+        );
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS otps (
             id SERIAL PRIMARY KEY,
+
             email VARCHAR(255) NOT NULL,
             otp_code VARCHAR(10) NOT NULL,
             expires_at VARCHAR(255) NOT NULL,
@@ -169,10 +185,11 @@ def init_tables():
     conn.commit()
     cursor.close()
     conn.close()
-    print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports, evaluators, idea_assignments) Verified!")
+    print("[OK] PostgreSQL Tables (users, otps, ideas, analysis_reports, evaluators, idea_assignments, departments) Verified!")
     # Auto seed master evaluators & sample role users
     seed_evaluators()
     seed_users()
+    seed_departments()
 
 def seed_initial_ideas():
     conn = get_db_connection()
@@ -339,9 +356,6 @@ def create_evaluator(name, email, role, domain, department=""):
     cursor.close()
     conn.close()
     return eval_dict
-
-# Initialize on module load
-init_tables()
 
 # ==========================================
 # DATABASE HELPER METHODS
@@ -1124,6 +1138,222 @@ def get_assignment_history_in_db(idea_id: int):
         })
     return history
 
+
+# ==========================================
+# USER MANAGEMENT DATABASE MODULE
+# ==========================================
+
+def seed_departments():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        depts = [
+            "Executive & Admin",
+            "Product Management",
+            "Business Analysis",
+            "Engineering & Technology",
+            "Quality Assurance",
+            "Project Management Office",
+            "Finance & Operations"
+        ]
+        for d in depts:
+            cursor.execute("INSERT INTO departments (name) VALUES (%s) ON CONFLICT (name) DO NOTHING;", (d,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as err:
+        print("[SEED DEPTS WARNING]", err)
+
+def get_all_users_detailed_rbac(search: str = "", role_filter: str = "", dept_filter: str = "", status_filter: str = ""):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT 
+            u.id, 
+            u.username, 
+            u.email, 
+            u.role,
+            u.employee_id, 
+            u.is_verified, 
+            COALESCE(u.status, 'Active') as status,
+            u.department_id,
+            d.name as department_name,
+            u.last_login,
+            u.created_at,
+            (SELECT COUNT(*) FROM ideas i WHERE LOWER(i.author_email) = LOWER(u.email) OR LOWER(i.author) = LOWER(u.username)) as ideas_count
+        FROM users u
+        LEFT JOIN departments d ON d.id = u.department_id
+        WHERE 1=1
+    """
+    params = []
+    if search:
+        query += " AND (LOWER(u.username) LIKE %s OR LOWER(u.email) LIKE %s OR LOWER(u.employee_id) LIKE %s)"
+        s_pat = f"%{search.strip().lower()}%"
+        params.extend([s_pat, s_pat, s_pat])
+
+    if role_filter and role_filter != "ALL":
+        query += " AND LOWER(u.role) = %s"
+        params.append(role_filter.strip().lower())
+
+    if dept_filter and dept_filter != "ALL":
+        query += " AND (LOWER(d.name) = %s OR u.department_id = %s)"
+        df = dept_filter.strip().lower()
+        params.extend([df, int(dept_filter) if dept_filter.isdigit() else 0])
+
+    if status_filter and status_filter != "ALL":
+        query += " AND LOWER(COALESCE(u.status, 'Active')) = %s"
+        params.append(status_filter.strip().lower())
+
+    query += " ORDER BY u.id ASC;"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    c_desc = cursor.description
+    cursor.close()
+    conn.close()
+
+    result = []
+    for r in rows:
+        u_dict = _row_to_dict(r, c_desc)
+        
+        created_str = u_dict["created_at"].strftime("%Y-%m-%d %H:%M:%S") if u_dict.get("created_at") and hasattr(u_dict["created_at"], "strftime") else str(u_dict.get("created_at") or "")
+        last_login_str = u_dict["last_login"].strftime("%Y-%m-%d %H:%M:%S") if u_dict.get("last_login") and hasattr(u_dict["last_login"], "strftime") else (str(u_dict.get("last_login")) if u_dict.get("last_login") else "Never")
+
+        result.append({
+            "id": u_dict["id"],
+            "username": u_dict["username"],
+            "name": u_dict["username"],
+            "email": u_dict["email"],
+            "role": u_dict["role"] or "User",
+            "employeeId": u_dict["employee_id"] or "",
+            "departmentId": u_dict["department_id"],
+            "department": u_dict["department_name"] or "General",
+            "status": u_dict["status"] or "Active",
+            "isVerified": bool(u_dict["is_verified"]),
+            "lastLogin": last_login_str,
+            "createdAt": created_str,
+            "submittedIdeasCount": u_dict.get("ideas_count") or 0
+        })
+    return result
+
+def create_user_rbac(name: str, email: str, hashed_password: str, role_name: str, department_id: int = None, employee_id: str = "", status: str = "Active"):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    clean_email = email.strip().lower()
+
+    cursor.execute("SELECT id FROM users WHERE LOWER(email) = %s;", (clean_email,))
+    if cursor.fetchone():
+        cursor.close()
+        conn.close()
+        raise Exception(f"User with email '{clean_email}' already exists.")
+
+    cursor.execute("""
+        INSERT INTO users (username, email, password, role, employee_id, is_verified, department_id, status)
+        VALUES (%s, %s, %s, %s, %s, TRUE, %s, %s)
+        RETURNING id, username, email, role, employee_id, status, created_at;
+    """, (name.strip(), clean_email, hashed_password, role_name or "User", employee_id or "", department_id, status or "Active"))
+    new_user = _row_to_dict(cursor.fetchone(), cursor.description)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return new_user
+
+def update_user_rbac(user_id: int, name: str, email: str, department_id: int = None, employee_id: str = "", role: str = None, status: str = None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = "UPDATE users SET username = %s, email = %s, department_id = %s, employee_id = %s, updated_at = CURRENT_TIMESTAMP"
+    params = [name.strip(), email.strip().lower(), department_id, employee_id or ""]
+
+    if role:
+        query += ", role = %s"
+        params.append(role.strip())
+
+    if status:
+        query += ", status = %s"
+        params.append(status.strip())
+
+    query += " WHERE id = %s RETURNING id, username, email, role, employee_id, status;"
+    params.append(user_id)
+
+    cursor.execute(query, tuple(params))
+    row = cursor.fetchone()
+    if not row:
+        cursor.close()
+        conn.close()
+        return None
+    updated_user = _row_to_dict(row, cursor.description)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return updated_user
+
+def update_user_status_rbac(user_id: int, status: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE users SET status = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING id, username, email, status;", (status, user_id))
+    updated_user = _row_to_dict(cursor.fetchone(), cursor.description)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return updated_user
+
+def update_user_role_rbac(user_id: int, new_role_name: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE users SET role = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING id, username, email, role;", (new_role_name, user_id))
+    updated_user = _row_to_dict(cursor.fetchone(), cursor.description)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return updated_user
+
+def reset_user_password_rbac(user_id: int, new_hashed_password: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET password = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING id, username, email;", (new_hashed_password, user_id))
+    row = cursor.fetchone()
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return bool(row)
+
+def delete_user_rbac(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
+
+def get_all_departments_rbac():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM departments ORDER BY id ASC;")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [{"id": r[0], "name": r[1]} for r in rows]
+
+def update_user_last_login_rbac(user_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s;", (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as err:
+        print("[LAST LOGIN UPDATE WARNING]", err)
+
+
 def get_notifications_in_db(user_id: int, user_email: str, user_role: str):
     return {"notifications": [], "unreadCount": 0}
+
+# Auto-initialize DB tables on module load
+init_tables()
+
 

@@ -16,7 +16,6 @@ function Card({
         <div className="card-header-bar">
           <div>
             {title && <h3 className="card-heading-title">{title}</h3>}
-            {subtitle && <p className="card-sub-title">{subtitle}</p>}
           </div>
           {action && <div>{action}</div>}
         </div>

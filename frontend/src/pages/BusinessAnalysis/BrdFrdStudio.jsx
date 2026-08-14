@@ -45,7 +45,6 @@ function BrdFrdStudio() {
               <FileText size={14} /> Requirements Engineering
             </span>
           </div>
-          <p>Author and manage Business Requirement Documents (BRD) and Functional Requirement Specifications (FRD).</p>
         </div>
 
         <div style={{ position: "relative", width: "280px" }}>
@@ -61,7 +60,7 @@ function BrdFrdStudio() {
         </div>
       </div>
 
-      <Card title={`BRD & FRD Specifications Repository (${displayedReports.length})`} subtitle="Approved requirements documents sent to Project Managers & Developers">
+      <Card title={`BRD & FRD Specifications Repository (${displayedReports.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

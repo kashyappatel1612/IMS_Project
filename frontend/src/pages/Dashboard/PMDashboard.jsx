@@ -195,9 +195,6 @@ function PMDashboard({ userName = "Project Manager" }) {
               <FolderKanban size={14} /> Agile Delivery Control Center ({userName})
             </span>
           </div>
-          <p>
-            Agile Project Management: Sprint planning, backlog tasks, milestone roadmaps, team allocation, and release sign-offs.
-          </p>
         </div>
 
         <div className="quick-actions-flex" style={{ display: "flex", gap: "10px" }}>
@@ -324,7 +321,6 @@ function PMDashboard({ userName = "Project Manager" }) {
       {/* PROPOSALS AWAITING PM APPROVAL & ACTION CARD */}
       <Card
         title={`🎯 Proposals Awaiting PM Approval & Action (${pendingPMApprovalList.length})`}
-        subtitle="Proposals passed from Stage 2 Feasibility Review requiring Project Manager approval to proceed"
         style={{ marginBottom: "24px", border: "1.5px solid #6366f1" }}
       >
         <div className="data-table-wrapper">
@@ -502,7 +498,6 @@ function PMDashboard({ userName = "Project Manager" }) {
       {/* PROJECT OVERVIEW TABLE */}
       <Card
         title={`Active Project Execution & Delivery Portfolio (${displayedProjects.length})`}
-        subtitle="Track sprint completion, team velocity, budget utilization, and milestone deadlines"
       >
         <div className="data-table-wrapper">
           <table className="enterprise-table">

@@ -267,11 +267,6 @@ function BusinessAnalysis() {
               <Briefcase size={14} /> Stage 3 Business & Commercial Evaluation
             </span>
           </div>
-          <p>
-            {userRole === "Business Analyst"
-              ? "Upload comprehensive business case reports, financial ROI projections, and submit directly to Project Manager (PM)."
-              : "Track proposals accepted from Stage 2 Feasibility Review, their assigned Business Analysts, and report submission status."}
-          </p>
         </div>
       </div>
 
@@ -302,7 +297,6 @@ function BusinessAnalysis() {
         /* ADMIN, PROJECT MANAGER & REVIEWER VIEW: Status Tracking Board */
         <Card
           title={`Feasibility Accepted Proposals & BA Report Status (${feasibleIdeas.length})`}
-          subtitle="Overview of proposals passed from Stage 2 Feasibility Review, assigned Business Analyst, and report status"
         >
           <div className="data-table-wrapper">
             <table className="enterprise-table">
@@ -423,7 +417,6 @@ function BusinessAnalysis() {
         <div style={{ width: "100%" }}>
           <Card
             title="1. Upload & Send Analysis Report to PM"
-            subtitle="Fill BA details, attach analysis document & dispatch to Project Manager"
           >
             <form onSubmit={handleSubmitReport} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* Select Idea Display or Dropdown */}
@@ -538,7 +531,6 @@ function BusinessAnalysis() {
               {selectedIdea && (
                 <Card
                   title="📑 Feasibility Evaluator Review Details"
-                  subtitle="Detailed recommendations, ratings and remarks submitted by evaluators in Stage 2"
                   style={{
                     background: "var(--card-bg, #ffffff)",
                     border: "1.5px solid var(--border-color, #e2e8f0)",

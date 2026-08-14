@@ -32,11 +32,10 @@ function ReleaseManagementStudio() {
               <Rocket size={14} /> Release Control
             </span>
           </div>
-          <p>Oversee release versioning, QA release gates, security compliance sign-offs, and production deployments.</p>
         </div>
       </div>
 
-      <Card title={`Production Releases & Deployment Pipeline (${releases.length})`} subtitle="Release gates verification and target release dates">
+      <Card title={`Production Releases & Deployment Pipeline (${releases.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

@@ -482,6 +482,178 @@ def get_users_by_role(role: Optional[str] = None):
         print("Get Users By Role Error:", err)
         raise HTTPException(status_code=500, detail="Failed to fetch users by role.")
 
+# ==========================================
+# ADMIN USER MANAGEMENT ENDPOINTS
+# ==========================================
+
+@app.get("/api/admin/users")
+@app.get("/api/users")
+@app.get("/users")
+def get_admin_users(
+    search: Optional[str] = None,
+    role: Optional[str] = None,
+    department: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        users = database.get_all_users_detailed_rbac(
+            search=search or "",
+            role_filter=role or "ALL",
+            dept_filter=department or "ALL",
+            status_filter=status or "ALL"
+        )
+        return users
+    except Exception as err:
+        print("Get Admin Users Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch users list.")
+
+@app.post("/api/admin/users", status_code=status.HTTP_201_CREATED)
+@app.post("/api/users", status_code=status.HTTP_201_CREATED)
+def create_admin_user(
+    req: schemas.AdminUserCreateRBACRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    if not req.username or not req.email:
+        raise HTTPException(status_code=400, detail="Name and email are required.")
+
+    clean_email = req.email.strip().lower()
+    raw_password = req.password or "Password@123"
+    hashed_pwd = hash_password(raw_password)
+
+    try:
+        new_user = database.create_user_rbac(
+            name=req.username,
+            email=clean_email,
+            hashed_password=hashed_pwd,
+            role_name=req.role or "User",
+            department_id=req.departmentId,
+            employee_id=req.employeeId or "",
+            status=req.status or "Active"
+        )
+        return {"message": "User created successfully!", "user": new_user}
+    except Exception as err:
+        print("Create Admin User Error:", err)
+        raise HTTPException(status_code=400, detail=str(err))
+
+@app.put("/api/admin/users/{user_id}")
+@app.put("/api/users/{user_id}")
+@app.patch("/api/users/{user_id}")
+def update_admin_user(
+    user_id: int,
+    req: schemas.AdminUserUpdateRBACRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        updated = database.update_user_rbac(
+            user_id=user_id,
+            name=req.username,
+            email=req.email,
+            department_id=req.departmentId,
+            employee_id=req.employeeId or "",
+            role=req.role,
+            status=req.status
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        return {"message": "User details updated successfully!", "user": updated}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Update Admin User Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to update user profile.")
+
+@app.patch("/api/admin/users/{user_id}/status")
+def update_admin_user_status(
+    user_id: int,
+    req: schemas.AdminUserStatusRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        updated = database.update_user_status_rbac(
+            user_id=user_id,
+            status=req.status
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        return {"message": f"User status updated to '{req.status}' successfully!", "user": updated}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Update User Status Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to update user status.")
+
+@app.patch("/api/admin/users/{user_id}/role")
+def update_admin_user_role(
+    user_id: int,
+    req: schemas.AdminUserRoleRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        updated = database.update_user_role_rbac(
+            user_id=user_id,
+            new_role_name=req.role
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        return {"message": f"User role changed to '{req.role}' successfully!", "user": updated}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Update User Role Error:", err)
+        raise HTTPException(status_code=400, detail=str(err))
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+def reset_admin_user_password(
+    user_id: int,
+    req: schemas.AdminResetPasswordRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    if not req.newPassword or len(req.newPassword) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters long.")
+
+    hashed_pwd = hash_password(req.newPassword)
+    try:
+        success = database.reset_user_password_rbac(
+            user_id=user_id,
+            new_hashed_password=hashed_pwd
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        return {"message": "Password reset successfully!"}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Reset Password Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to reset password.")
+
+@app.delete("/api/admin/users/{user_id}")
+@app.delete("/api/users/{user_id}")
+def delete_admin_user(
+    user_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        success = database.delete_user_rbac(user_id=user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        return {"message": "User account permanently deleted successfully."}
+    except HTTPException:
+        raise
+    except Exception as err:
+        print("Delete User Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to delete user account.")
+
+@app.get("/api/admin/departments")
+def get_admin_departments(current_user: dict = Depends(get_current_user)):
+    try:
+        departments = database.get_all_departments_rbac()
+        return departments
+    except Exception as err:
+        print("Get Departments Error:", err)
+        raise HTTPException(status_code=500, detail="Failed to fetch departments.")
+
+
 @app.post("/api/assignments", status_code=status.HTTP_201_CREATED)
 @app.post("/assignments", status_code=status.HTTP_201_CREATED)
 def create_assignment(req: schemas.AssignmentCreateRequest, current_user: dict = Depends(get_current_user)):

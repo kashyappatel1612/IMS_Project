@@ -102,7 +102,6 @@ function Execution() {
               <PlayCircle size={14} /> Active Implementation Lifecycle
             </span>
           </div>
-          <p>Monitor sprint milestones, deliverable progress, target launch dates, and project status updates in real-time.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -113,7 +112,7 @@ function Execution() {
       </div>
 
       {/* Main Execution Table */}
-      <Card title={`Active Projects in Execution Pipeline (${projects.length})`} subtitle="Real-time execution status synced with BA Analysis Reports & PM Control Hub">
+      <Card title={`Active Projects in Execution Pipeline (${projects.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

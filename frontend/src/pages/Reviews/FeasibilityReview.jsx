@@ -37,9 +37,9 @@ const inputFieldStyle = {
   fontWeight: "500",
   padding: "8px 12px",
   borderRadius: "6px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
-  color: "#1e293b",
+  border: "1px solid var(--border-color, #cbd5e1)",
+  background: "var(--card-bg, #ffffff)",
+  color: "var(--text-dark, #1e293b)",
   outline: "none",
   boxSizing: "border-box"
 };
@@ -50,9 +50,9 @@ const textareaFieldStyle = {
   fontWeight: "500",
   padding: "8px 12px",
   borderRadius: "6px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
-  color: "#1e293b",
+  border: "1px solid var(--border-color, #cbd5e1)",
+  background: "var(--card-bg, #ffffff)",
+  color: "var(--text-dark, #1e293b)",
   outline: "none",
   boxSizing: "border-box"
 };

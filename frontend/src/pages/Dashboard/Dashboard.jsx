@@ -105,7 +105,6 @@ function Dashboard() {
               <UserCheck size={14} /> Innovator Mode ({userRole})
             </span>
           </div>
-          <p>Click on any KPI card below to filter your submitted ideas by their real-time evaluation status.</p>
         </div>
 
         <div className="quick-actions-flex">
@@ -193,10 +192,7 @@ function Dashboard() {
       </div>
 
       {/* My Submissions Status Table */}
-      <Card
-        title={`My Submitted Innovation Ideas (${filterMode.toUpperCase()})`}
-        subtitle="Track real-time evaluation status and committee responses for your submissions"
-      >
+      <Card title={`My Submitted Ideas (${displayedSubmissions.length})`}>
         {/* Quick Filter Pill Buttons */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-muted)" }}>Active Filter:</span>

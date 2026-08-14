@@ -11,14 +11,19 @@ import {
   AlertCircle,
   Save,
   Bell,
-  Check
+  Check,
+  Sun,
+  Moon,
+  Palette
 } from "lucide-react";
 import Button from "../../components/Button";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
 import { updateUserProfile } from "../../services/api";
+import { useTheme } from "../../context/ThemeContext";
 
 function Settings() {
+  const { theme, setTheme, toggleTheme } = useTheme();
   const [user, setUser] = useState({
     username: "",
     email: "",
@@ -189,7 +194,6 @@ function Settings() {
             </span>
           </div>
           <h1>User Account Management</h1>
-          <p>Update your personal profile, security credentials, and system preferences.</p>
         </div>
       </div>
 
@@ -274,7 +278,7 @@ function Settings() {
 
         <form onSubmit={handleSubmit}>
           {/* Section 1: Profile Information */}
-          <Card title="1. Profile Details" subtitle="Update your display name and official organization details">
+          <Card title="1. Profile Details">
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
               <Input
                 label="Full Name / Display Name"
@@ -311,7 +315,7 @@ function Settings() {
           <div style={{ height: "20px" }}></div>
 
           {/* Section 2: Security & Password */}
-          <Card title="2. Account Security & Password" subtitle="Change your password to keep your account secure">
+          <Card title="2. Account Security & Password">
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "10px 0" }}>
               <Input
                 label="Current Password"
@@ -356,8 +360,101 @@ function Settings() {
 
           <div style={{ height: "20px" }}></div>
 
-          {/* Section 3: Notification Preferences */}
-          <Card title="3. Notification Preferences" subtitle="Manage email digest and system alert settings">
+          {/* Section 3: Appearance & Theme Preferences */}
+          <Card title="3. Appearance & Theme Preferences">
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "10px 0" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                
+                {/* Light Mode Option Box */}
+                <div
+                  onClick={() => setTheme("light")}
+                  style={{
+                    padding: "16px",
+                    borderRadius: "12px",
+                    border: theme === "light" ? "2px solid var(--primary)" : "1px solid var(--border-color)",
+                    background: theme === "light" ? "var(--primary-light, #eef2ff)" : "var(--bg-main)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#6366f1"
+                    }}
+                  >
+                    <Sun size={20} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)", display: "block" }}>
+                      Light Theme
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                      Clean, high-visibility bright workspace
+                    </span>
+                  </div>
+                  {theme === "light" && <Check size={18} color="var(--primary)" style={{ marginLeft: "auto" }} />}
+                </div>
+
+                {/* Dark Mode Option Box */}
+                <div
+                  onClick={() => setTheme("dark")}
+                  style={{
+                    padding: "16px",
+                    borderRadius: "12px",
+                    border: theme === "dark" ? "2px solid var(--primary)" : "1px solid var(--border-color)",
+                    background: theme === "dark" ? "rgba(99, 102, 241, 0.15)" : "var(--bg-main)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: "#1e293b",
+                      border: "1px solid #334155",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#f59e0b"
+                    }}
+                  >
+                    <Moon size={20} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-dark)", display: "block" }}>
+                      Dark Theme
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                      Sleek, low-glare dark slate workspace
+                    </span>
+                  </div>
+                  {theme === "dark" && <Check size={18} color="var(--primary)" style={{ marginLeft: "auto" }} />}
+                </div>
+
+              </div>
+            </div>
+          </Card>
+
+          <div style={{ height: "20px" }}></div>
+
+          {/* Section 4: Notification Preferences */}
+          <Card title="4. Notification Preferences">
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "10px 0" }}>
               <label
                 style={{

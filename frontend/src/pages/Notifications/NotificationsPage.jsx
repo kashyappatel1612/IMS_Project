@@ -82,7 +82,6 @@ function NotificationsPage() {
               <Bell size={14} /> Real-Time Notifications ({unreadCount} Unread)
             </span>
           </div>
-          <p>Automated system alerts for new proposal submissions, role allocations, and stage gate progressions.</p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
@@ -95,7 +94,7 @@ function NotificationsPage() {
       </div>
 
       {/* Main Notification Card */}
-      <Card title={`System Alerts (${displayedNotifs.length})`} subtitle={`Logged in as ${userRole} (${userEmail || "User"})`}>
+      <Card title={`System Alerts (${displayedNotifs.length})`}>
         {/* Filter Pills */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-muted)" }}>Filter Category:</span>

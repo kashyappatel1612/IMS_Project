@@ -60,7 +60,6 @@ function UserStoriesStudio() {
               <ListTodo size={14} /> Agile Requirements
             </span>
           </div>
-          <p>Define user personas, story points, acceptance criteria, and business rules for developers.</p>
         </div>
 
         <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
@@ -68,7 +67,7 @@ function UserStoriesStudio() {
         </Button>
       </div>
 
-      <Card title={`Agile User Stories & Acceptance Criteria (${stories.length})`} subtitle="Backlog user stories ready for Estimation & Development sprint planning">
+      <Card title={`Agile User Stories & Acceptance Criteria (${stories.length})`}>
         <div className="data-table-wrapper">
           <table className="enterprise-table">
             <thead>

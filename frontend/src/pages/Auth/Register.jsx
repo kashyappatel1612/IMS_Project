@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Mail, Lock, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle2, ArrowRight, RefreshCw } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle2, ArrowRight, RefreshCw, UserCheck } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
-import imsLogo from "../../assets/ims-logo.jpg";
+import AuthStage from "../../components/AuthStage";
 import { registerUser, verifyOtpApi, resendOtpApi } from "../../services/api";
 import { switchAccount } from "../../utils/authHistory";
 
@@ -101,7 +101,6 @@ function Register() {
     }
   };
 
-  // Helper to save user in local storage
   const saveUserToLocalStorage = (userObj) => {
     try {
       let users = [];
@@ -200,7 +199,6 @@ function Register() {
     }
   };
 
-  // Resend OTP
   const handleResendOtp = async () => {
     setError("");
     try {
@@ -215,189 +213,221 @@ function Register() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        {/* Brand Header */}
-        <div className="auth-brand-header">
-          <img src={imsLogo} alt="IMS Group" className="auth-brand-logo" />
-          <div className="auth-brand-titles">
-            <h2>{isOtpStep ? "Email OTP Verification" : "Create Account"}</h2>
-            <p>{isOtpStep ? `Enter 6-digit code sent to ${formData.email}` : "Join IMS Group Innovation Portal"}</p>
+    <div className="emerald-auth-page">
+      <div className="emerald-auth-card">
+        
+        {/* SHARED AUTOMATED IMS GROUP ORBITING STAGE */}
+        <AuthStage isSubmitting={loading} />
+
+        {/* RIGHT PANEL — REGISTRATION FORM */}
+        <div className="emerald-right-panel" style={{ padding: "36px 36px" }}>
+          
+          {/* Header Avatar Circle */}
+          <div className="emerald-avatar-wrapper" style={{ marginBottom: "16px" }}>
+            <div className="emerald-avatar-circle">
+              <UserPlus size={28} color="#38bdf8" />
+            </div>
+            <h2 className="emerald-welcome-title">
+              {isOtpStep ? "OTP VERIFICATION" : "CREATE ACCOUNT"}
+            </h2>
+            <p className="emerald-welcome-subtitle">
+              {isOtpStep ? `6-Digit Code sent to ${formData.email}` : "Join IMS Group Innovation Portal"}
+            </p>
           </div>
-        </div>
 
-        {error && (
-          <div className="auth-alert error">
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <div className="auth-alert error" style={{ marginBottom: "12px" }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
 
-        {/* STEP 2: 6-SQUARE OTP VERIFICATION VIEW */}
-        {isOtpStep ? (
-          <form onSubmit={handleVerifyOtp} className="auth-form">
-            <div className="otp-boxes-container">
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-dark)", marginBottom: "4px" }}>
-                Enter 6-Digit OTP Code
-              </label>
+          {/* STEP 2: 6-SQUARE OTP VERIFICATION VIEW */}
+          {isOtpStep ? (
+            <form onSubmit={handleVerifyOtp} className="emerald-login-form">
+              <div className="otp-boxes-container">
+                <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "4px" }}>
+                  ENTER 6-DIGIT OTP CODE
+                </label>
 
-              <div className="otp-boxes-grid">
-                {otpDigits.map((digit, index) => (
+                <div className="otp-boxes-grid">
+                  {otpDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      id={`otp-box-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleDigitChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      className="otp-digit-box"
+                      autoFocus={index === 0}
+                      required
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px" }}>
+                <span style={{ color: "#64748b" }}>
+                  {resendTimer > 0 ? `Resend code in ${resendTimer}s` : "Didn't receive code?"}
+                </span>
+                <button
+                  type="button"
+                  disabled={resendDisabled}
+                  onClick={handleResendOtp}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: resendDisabled ? "#94a3b8" : "#2563eb",
+                    fontWeight: "700",
+                    cursor: resendDisabled ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <RefreshCw size={13} /> Resend OTP
+                </button>
+              </div>
+
+              <button type="submit" className="emerald-login-btn" disabled={loading}>
+                {loading ? <span className="btn-spinner"></span> : "VERIFY OTP & SIGN UP"}
+              </button>
+            </form>
+          ) : (
+            /* STEP 1: REGISTRATION FORM VIEW */
+            <form onSubmit={handleRegister} className="emerald-login-form">
+              
+              {/* Account Role Dropdown */}
+              <div className="input-field-group">
+                <label className="input-label" style={{ fontSize: "11.5px", fontWeight: "600", color: "#475569" }}>
+                  ACCOUNT ROLE
+                </label>
+                <select
+                  className="emerald-input-field"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  style={{ padding: "8px 10px", fontSize: "13px" }}
+                  required
+                >
+                  <option value="User">User</option>
+                  <option value="Project Coordinator">Project Coordinator</option>
+                  <option value="Administrator">Administrator</option>
+                  <option value="Business Analyst">Business Analyst</option>
+                  <option value="Reviewer">Reviewer</option>
+                  <option value="Project Manager">Project Manager</option>
+                </select>
+              </div>
+
+              {/* Full Name */}
+              <div className="input-field-group">
+                <label className="input-label" style={{ fontSize: "11.5px", fontWeight: "600", color: "#475569" }}>
+                  FULL NAME / USERNAME
+                </label>
+                <div className="emerald-input-wrapper">
+                  <User size={15} className="emerald-input-icon" />
                   <input
-                    key={index}
-                    id={`otp-box-${index}`}
                     type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleDigitChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="otp-digit-box"
-                    autoFocus={index === 0}
+                    name="username"
+                    className="emerald-line-input"
+                    placeholder="Ayushman Raj"
+                    value={formData.username}
+                    onChange={handleChange}
                     required
                   />
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px" }}>
-              <span style={{ color: "var(--text-muted)" }}>
-                {resendTimer > 0 ? `Resend code in ${resendTimer}s` : "Didn't receive code?"}
-              </span>
-              <button
-                type="button"
-                disabled={resendDisabled}
-                onClick={handleResendOtp}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: resendDisabled ? "#94a3b8" : "var(--primary)",
-                  fontWeight: "700",
-                  cursor: resendDisabled ? "not-allowed" : "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px"
-                }}
-              >
-                <RefreshCw size={13} /> Resend OTP
-              </button>
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              loading={loading}
-              icon={CheckCircle2}
-            >
-              Verify OTP & Complete Sign Up
-            </Button>
-          </form>
-        ) : (
-          /* STEP 1: REGISTRATION FORM VIEW */
-          <form onSubmit={handleRegister} className="auth-form">
-            {/* Select Account Role Dropdown */}
-            <div className="input-field-group">
-              <label className="input-label" style={{ fontWeight: "700", color: "var(--text-dark)" }}>
-                Select Account Role <span style={{ color: "var(--danger)" }}>*</span>
-              </label>
-              <select
-                className="custom-input-elem custom-select-elem"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                style={{ fontSize: "14px", padding: "11px 14px", fontWeight: "600", width: "100%" }}
-                required
-              >
-                <option value="User">User</option>
-                <option value="Project Coordinator">Project Coordinator</option>
-                <option value="Administrator">Administrator</option>
-                <option value="Business Analyst">Business Analyst</option>
-                <option value="Reviewer">Reviewer</option>
-                <option value="Project Manager">Project Manager</option>
-              </select>
-            </div>
-
-            <Input
-              label="Full Name / Username"
-              name="username"
-              placeholder="Ayushman Raj"
-              value={formData.username}
-              onChange={handleChange}
-              icon={User}
-              required
-            />
-
-            <Input
-              label="Work Email Address"
-              type="email"
-              name="email"
-              placeholder="ayushman@imsgroup.com"
-              value={formData.email}
-              onChange={handleChange}
-              icon={Mail}
-              required
-            />
-
-            <div>
-              <Input
-                label="Password"
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="Create strong password"
-                value={formData.password}
-                onChange={handleChange}
-                icon={Lock}
-                rightAction={showPassword ? EyeOff : Eye}
-                onRightActionClick={() => setShowPassword(!showPassword)}
-                required
-              />
-              {formData.password && (
-                <div className={`strength-meter-container ${strength.class}`}>
-                  <div className="strength-bars-flex">
-                    <div className="strength-bar-segment bar-1"></div>
-                    <div className="strength-bar-segment bar-2"></div>
-                    <div className="strength-bar-segment bar-3"></div>
-                  </div>
-                  <span className="strength-label-text">
-                    Password strength: {strength.label}
-                  </span>
                 </div>
-              )}
-            </div>
+              </div>
 
-            <Input
-              label="Confirm Password"
-              type={showConfirmPassword ? "text" : "password"}
-              name="confirmPassword"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              icon={Lock}
-              rightAction={showConfirmPassword ? EyeOff : Eye}
-              onRightActionClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              required
-            />
+              {/* Email */}
+              <div className="input-field-group">
+                <label className="input-label" style={{ fontSize: "11.5px", fontWeight: "600", color: "#475569" }}>
+                  WORK EMAIL ADDRESS
+                </label>
+                <div className="emerald-input-wrapper">
+                  <Mail size={15} className="emerald-input-icon" />
+                  <input
+                    type="email"
+                    name="email"
+                    className="emerald-line-input"
+                    placeholder="ayushman@imsgroup.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              loading={loading}
-              icon={ArrowRight}
-            >
-              Get OTP & Continue ({role})
-            </Button>
-          </form>
-        )}
+              {/* Password */}
+              <div className="input-field-group">
+                <label className="input-label" style={{ fontSize: "11.5px", fontWeight: "600", color: "#475569" }}>
+                  PASSWORD
+                </label>
+                <div className="emerald-input-wrapper">
+                  <Lock size={15} className="emerald-input-icon" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    className="emerald-line-input"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="emerald-eye-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
 
-        <div className="auth-footer">
-          <p>
-            Already have an account?{" "}
-            <Link to="/" className="auth-link">
-              Sign In
-            </Link>
-          </p>
+              {/* Confirm Password */}
+              <div className="input-field-group">
+                <label className="input-label" style={{ fontSize: "11.5px", fontWeight: "600", color: "#475569" }}>
+                  CONFIRM PASSWORD
+                </label>
+                <div className="emerald-input-wrapper">
+                  <Lock size={15} className="emerald-input-icon" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    className="emerald-line-input"
+                    placeholder="••••••••"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="emerald-eye-btn"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" className="emerald-login-btn" disabled={loading} style={{ marginTop: "4px" }}>
+                {loading ? <span className="btn-spinner"></span> : `CONTINUE AS ${role.toUpperCase()}`}
+              </button>
+            </form>
+          )}
+
+          <div className="emerald-footer-links" style={{ marginTop: "14px" }}>
+            <p>
+              Already have an account?{" "}
+              <Link to="/" className="emerald-reg-link">
+                Sign In
+              </Link>
+            </p>
+          </div>
+
         </div>
+
       </div>
     </div>
   );

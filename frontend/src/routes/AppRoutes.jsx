@@ -40,8 +40,8 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public SaaS Showcase & Authentication Routes */}
-        <Route path="/" element={<LandingPage />} />
+        {/* Root & Authentication Routes */}
+        <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -82,7 +82,7 @@ function AppRoutes() {
           <Route
             path="/user-management"
             element={
-              <ProtectedRoute allowedRoles={["Administrator", "Project Coordinator"]}>
+              <ProtectedRoute allowedRoles={["Administrator", "Admin"]}>
                 <UserManagementStudio />
               </ProtectedRoute>
             }
